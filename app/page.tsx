@@ -1,8 +1,10 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Button } from './components/Button';
-import { Resolution, AspectRatio, GeneratedImage, TemplateId, PHOTO_TEMPLATES, Language } from './types';
-import { generateProductPhoto } from './services/geminiService';
+"use client";
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from '../components/Button';
+import { Resolution, AspectRatio, GeneratedImage, TemplateId, PHOTO_TEMPLATES, Language } from '../types';
+import { generateProductPhotoAction } from './actions';
 
 // Price per 1M tokens (estimated for simulation)
 const RATES = {
@@ -29,7 +31,7 @@ const translations = {
     render: "RENDER PRODUCT",
     rendering: "RENDERING ON BACKEND...",
     workspace: "Workspace",
-    resultsDesc: "Professional renders powered by Gemini Vision",
+    resultsDesc: "Professional renders powered by Server Actions",
     saved: "SAVED",
     awaiting: "Awaiting Inputs",
     processingDesc: "CasStudio is re-lighting your product in a professional environment",
@@ -59,7 +61,7 @@ const translations = {
     render: "بدء المعالجة",
     rendering: "جاري المعالجة على الخادم...",
     workspace: "ساحة العمل",
-    resultsDesc: "صور احترافية مدعومة بمحركات Gemini",
+    resultsDesc: "صور احترافية مدعومة بإجراءات الخادم",
     saved: "محفوظ",
     awaiting: "بانتظار المدخلات",
     processingDesc: "يقوم كاس استوديو بإعادة إضاءة منتجك في بيئة احترافية",
@@ -104,14 +106,12 @@ const ImageMagnifier: React.FC<{ src: string; alt: string }> = ({ src, alt }) =>
       {showMagnifier && (
         <div
           style={{
-            display: showMagnifier ? "" : "none",
             position: "absolute",
             pointerEvents: "none",
             height: `${magnifierHeight}px`,
             width: `${magnifierWidth}px`,
             top: `${y - magnifierHeight / 2}px`,
             left: `${x - magnifierWidth / 2}px`,
-            opacity: "1",
             border: "2px solid #6366f1",
             backgroundColor: "white",
             backgroundImage: `url('${src}')`,
@@ -128,7 +128,7 @@ const ImageMagnifier: React.FC<{ src: string; alt: string }> = ({ src, alt }) =>
   );
 };
 
-const App: React.FC = () => {
+export default function CasStudioPage() {
   const [lang, setLang] = useState<Language>('en');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -152,7 +152,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkKey = async () => {
-      if (window.aistudio) {
+      if (typeof window !== 'undefined' && window.aistudio) {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         if (!hasKey) {
           await window.aistudio.openSelectKey();
@@ -193,7 +193,7 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const imageUrl = await generateProductPhoto({
+      const response = await generateProductPhotoAction({
         prompt,
         templateId: selectedTemplate !== 'none' ? selectedTemplate : undefined,
         resolution,
@@ -205,15 +205,13 @@ const App: React.FC = () => {
       const templateLabel = selectedT ? selectedT.label[lang] : (lang === 'en' ? 'Custom' : 'مخصص');
       const displayPrompt = prompt.trim() ? `${templateLabel}: ${prompt}` : templateLabel;
 
-      const isPro = resolution === Resolution.R2K || resolution === Resolution.R4K;
-      
       const newResult: GeneratedImage = {
         id: Date.now().toString(),
-        url: imageUrl,
+        url: response.imageUrl,
         prompt: displayPrompt,
         timestamp: Date.now(),
-        tokensUsed: 1200, 
-        modelType: isPro ? 'pro' : 'flash'
+        tokensUsed: response.tokensUsed,
+        modelType: response.modelType
       };
 
       setResults(prev => [newResult, ...prev]);
@@ -222,7 +220,7 @@ const App: React.FC = () => {
         setError(t.errorExpired);
         if (window.aistudio) await window.aistudio.openSelectKey();
       } else {
-        setError("Generation failed. Check your prompt or try a different image.");
+        setError(err.message || t.errorGeneric);
       }
       console.error(err);
     } finally {
@@ -321,7 +319,7 @@ const App: React.FC = () => {
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800"></div>
                 </div>
               </div>
-              
+
               {PHOTO_TEMPLATES.map(template => (
                 <div key={template.id} className="relative group/tooltip">
                   <button
@@ -439,6 +437,4 @@ const App: React.FC = () => {
       `}} />
     </div>
   );
-};
-
-export default App;
+}

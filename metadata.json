@@ -1,0 +1,7 @@
+{
+  "name": "CasStudio",
+  "description": "Transform your smartphone product photos into high-end professional e-commerce imagery using Gemini 3 Pro. Elevate your brand with 2K and 4K studio-quality visuals for Instagram and your online shop.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

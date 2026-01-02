@@ -53,6 +53,10 @@ export interface GeneratedImage {
   id: string;
   url: string;
   prompt: string;
+  templateLabel: string;
+  resolution: Resolution;
+  aspectRatio: AspectRatio;
+  hasLogo: boolean;
   timestamp: number;
   tokensUsed: number;
   modelType: 'flash' | 'pro';
@@ -64,6 +68,7 @@ export interface GenerationParams {
   resolution: Resolution;
   aspectRatio: AspectRatio;
   base64Image?: string;
+  logoBase64?: string;
 }
 
 export const PHOTO_TEMPLATES: PhotoTemplate[] = [
@@ -108,7 +113,7 @@ export const PHOTO_TEMPLATES: PhotoTemplate[] = [
       en: 'Elegant catalog style. Clean background with soft professional lighting.', 
       ar: 'أسلوب كتالوج أنيق. خلفية نظيفة مع إضاءة احترافية ناعمة.' 
     },
-    promptBase: 'A professional female fashion model wearing the garment, elegant xpose, clean studio background, professional catalogue lighting.'
+    promptBase: 'A professional female fashion model wearing the garment, elegant pose, clean studio background, professional catalogue lighting.'
   },
   {
     id: 'apparel_active',

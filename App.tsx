@@ -15,11 +15,12 @@ const translations = {
     title: "CasStudio",
     subtitle: "AI-Powered E-Commerce Assets",
     configure: "Configure Key",
-    step1: "Source Image",
+    step1: "Visual Assets",
     step2: "Style Template",
     step3: "Fine-tune & Export",
-    upload: "Upload Product",
-    change: "CHANGE PHOTO",
+    uploadProduct: "Upload Product",
+    uploadLogo: "Brand Logo (Optional)",
+    change: "CHANGE",
     customOnly: "Custom Only",
     customDesc: "No template. Fully rely on your custom description to build the scene from scratch.",
     addTemplate: "Create New Style",
@@ -30,10 +31,10 @@ const translations = {
     render: "RENDER PRODUCT",
     rendering: "RENDERING ON BACKEND...",
     workspace: "Workspace",
-    resultsDesc: "Professional renders powered by Gemini Vision",
-    saved: "SAVED",
+    resultsDesc: "Each render is generated as an independent job with unique lighting and scene interpretation.",
+    saved: "HISTORY",
     awaiting: "Awaiting Inputs",
-    processingDesc: "CasStudio is re-lighting your product in a professional environment",
+    processingDesc: "CasStudio is re-lighting your product in an isolated session",
     proMastered: "PRO MASTERED",
     totalUsage: "Total Usage",
     estCost: "Est. Cost",
@@ -48,17 +49,20 @@ const translations = {
     saveBtn: "Save Style",
     cancelBtn: "Cancel",
     delete: "Delete",
-    userStyles: "My Custom Styles"
+    userStyles: "My Custom Styles",
+    resetBtn: "Reset All Inputs",
+    clearHistory: "Clear History"
   },
   ar: {
     title: "كاس استوديو",
     subtitle: "أصول التجارة الإلكترونية بالذكاء الاصطناعي",
     configure: "إعداد المفتاح",
-    step1: "صورة المنتج",
+    step1: "الأصول المرئية",
     step2: "قالب النمط",
     step3: "الضبط والتصدير",
-    upload: "رفع المنتج",
-    change: "تغيير الصورة",
+    uploadProduct: "رفع المنتج",
+    uploadLogo: "شعار العلامة (اختياري)",
+    change: "تغيير",
     customOnly: "تخصيص فقط",
     customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص لبناء المشهد من الصفر.",
     addTemplate: "إضافة نمط جديد",
@@ -69,10 +73,10 @@ const translations = {
     render: "بدء المعالجة",
     rendering: "جاري المعالجة على الخادم...",
     workspace: "ساحة العمل",
-    resultsDesc: "صور احترافية مدعومة بمحركات Gemini",
-    saved: "محفوظ",
+    resultsDesc: "يتم توليد كل صورة كعملية مستقلة بإضاءة وتفسير مشهد فريد.",
+    saved: "السجل",
     awaiting: "بانتظار المدخلات",
-    processingDesc: "يقوم كاس استوديو بإعادة إضاءة منتجك في بيئة احترافية",
+    processingDesc: "يقوم كاس استوديو بإعادة إضاءة منتجك في جلسة معزولة",
     proMastered: "إتقان احترافي",
     totalUsage: "إجمالي الاستخدام",
     estCost: "التكلفة التقديرية",
@@ -87,7 +91,9 @@ const translations = {
     saveBtn: "حفظ النمط",
     cancelBtn: "إلغاء",
     delete: "حذف",
-    userStyles: "أنماطي المخصصة"
+    userStyles: "أنماطي المخصصة",
+    resetBtn: "إعادة ضبط المدخلات",
+    clearHistory: "مسح السجل"
   }
 };
 
@@ -148,6 +154,7 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('en');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
   const [results, setResults] = useState<GeneratedImage[]>([]);
   const [prompt, setPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>('none');
@@ -162,14 +169,18 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const saved = localStorage.getItem('cas_user_templates');
-    if (saved) {
-      setUserTemplates(JSON.parse(saved));
-    }
+    const savedResults = localStorage.getItem('cas_history');
+    if (saved) setUserTemplates(JSON.parse(saved));
+    if (savedResults) setResults(JSON.parse(savedResults));
   }, []);
 
   useEffect(() => {
     localStorage.setItem('cas_user_templates', JSON.stringify(userTemplates));
   }, [userTemplates]);
+
+  useEffect(() => {
+    localStorage.setItem('cas_history', JSON.stringify(results));
+  }, [results]);
 
   const allTemplates = useMemo(() => {
     return [...PHOTO_TEMPLATES, ...userTemplates];
@@ -194,24 +205,26 @@ const App: React.FC = () => {
     return groups;
   }, [lang, allTemplates]);
 
-  useEffect(() => {
-    const checkKey = async () => {
-      if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        if (!hasKey) {
-          await window.aistudio.openSelectKey();
-        }
-      }
-    };
-    checkKey();
-  }, []);
+  const handleReset = () => {
+    setSelectedImage(null);
+    setSelectedLogo(null);
+    setPrompt('');
+    setSelectedTemplate('none');
+    setResolution(Resolution.R1K);
+    setAspectRatio(AspectRatio.A1_1);
+    setError(null);
+  };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'product' | 'logo') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
+        if (type === 'product') {
+          setSelectedImage(reader.result as string);
+        } else {
+          setSelectedLogo(reader.result as string);
+        }
         setError(null);
       };
       reader.readAsDataURL(file);
@@ -219,46 +232,51 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = async () => {
-    if (selectedTemplate === 'none' && !prompt.trim()) {
-      setError(t.errorSelect);
+    if (!selectedImage) {
+      setError(lang === 'en' ? "Please upload a product image first." : "يرجى رفع صورة منتج أولاً.");
       return;
     }
 
-    if (resolution === Resolution.R2K || resolution === Resolution.R4K) {
-      if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        if (!hasKey) {
-          await window.aistudio.openSelectKey();
-        }
-      }
+    if (selectedTemplate === 'none' && !prompt.trim() && !selectedLogo) {
+      setError(t.errorSelect);
+      return;
     }
 
     setIsGenerating(true);
     setError(null);
 
     try {
-      // Find template in either default or user list
-      const selectedT = allTemplates.find(t => t.id === selectedTemplate);
+      // Capture current state to ensure the result is locked to these parameters
+      const currentPrompt = prompt;
+      const currentTemplateId = selectedTemplate;
+      const currentResolution = resolution;
+      const currentAspectRatio = aspectRatio;
+      const hasLogo = !!selectedLogo;
 
       const imageUrl = await generateProductPhoto({
-        prompt,
-        templateId: selectedTemplate !== 'none' ? selectedTemplate : undefined,
-        resolution,
-        aspectRatio,
-        base64Image: selectedImage || undefined,
+        prompt: currentPrompt,
+        templateId: currentTemplateId !== 'none' ? currentTemplateId : undefined,
+        resolution: currentResolution,
+        aspectRatio: currentAspectRatio,
+        base64Image: selectedImage,
+        logoBase64: selectedLogo || undefined,
       });
 
-      const templateLabel = selectedT ? selectedT.label[lang] : (lang === 'en' ? 'Custom' : 'مخصص');
-      const displayPrompt = prompt.trim() ? `${templateLabel}: ${prompt}` : templateLabel;
+      const selectedT = allTemplates.find(t => t.id === currentTemplateId);
+      const templateLabel = selectedT ? (selectedT.label[lang] || selectedT.label.en) : (lang === 'en' ? 'Custom' : 'مخصص');
 
-      const isPro = resolution === Resolution.R2K || resolution === Resolution.R4K;
+      const isPro = currentResolution === Resolution.R2K || currentResolution === Resolution.R4K;
       
       const newResult: GeneratedImage = {
         id: Date.now().toString(),
         url: imageUrl,
-        prompt: displayPrompt,
+        prompt: currentPrompt,
+        templateLabel,
+        resolution: currentResolution,
+        aspectRatio: currentAspectRatio,
+        hasLogo,
         timestamp: Date.now(),
-        tokensUsed: isPro ? 2500 : 1200, 
+        tokensUsed: isPro ? 3500 : 1800,
         modelType: isPro ? 'pro' : 'flash'
       };
 
@@ -268,7 +286,7 @@ const App: React.FC = () => {
         setError(t.errorExpired);
         if (window.aistudio) await window.aistudio.openSelectKey();
       } else {
-        setError("Generation failed. Check your prompt or try a different image.");
+        setError("Generation failed. Each attempt is standalone; please try re-uploading or adjusting your prompt.");
       }
       console.error(err);
     } finally {
@@ -278,7 +296,6 @@ const App: React.FC = () => {
 
   const handleSaveTemplate = () => {
     if (!newTemplate.label || !newTemplate.prompt) return;
-    
     const id = `user_${Date.now()}`;
     const template: PhotoTemplate = {
       id,
@@ -288,11 +305,9 @@ const App: React.FC = () => {
       promptBase: newTemplate.prompt,
       isUserCreated: true
     };
-
     setUserTemplates(prev => [...prev, template]);
     setNewTemplate({ label: '', category: '', prompt: '' });
     setShowModal(false);
-    setSelectedTemplate(id);
   };
 
   const handleDeleteTemplate = (id: string, e: React.MouseEvent) => {
@@ -351,29 +366,63 @@ const App: React.FC = () => {
 
       <main className="flex-1 flex flex-col lg:flex-row p-6 gap-8 max-w-screen-2xl mx-auto w-full">
         <aside className="w-full lg:w-[420px] flex flex-col gap-6 shrink-0 h-fit lg:sticky lg:top-[88px]">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Isolated Work Environment</h2>
+            <button onClick={handleReset} className="text-[10px] font-bold text-red-500 hover:text-red-700 transition-colors uppercase flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16m16-16v16" /></svg>
+              {t.resetBtn}
+            </button>
+          </div>
+          
+          {/* Step 1: Uploads */}
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">1</span>
               {t.step1}
             </h2>
-            <div className="relative group">
-              <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-              <div className={`border-2 border-dashed rounded-xl p-4 transition-all bg-white ${selectedImage ? 'border-indigo-400 bg-indigo-50/10' : 'border-slate-200 hover:border-indigo-300'}`}>
-                {selectedImage ? (
-                  <div className="relative aspect-video rounded-lg overflow-hidden bg-white">
-                    <img src={selectedImage} alt="Preview" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">{t.change}</div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">{t.uploadProduct}</label>
+                <div className="relative group">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'product')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <div className={`border-2 border-dashed rounded-xl p-3 transition-all bg-white ${selectedImage ? 'border-indigo-400 bg-indigo-50/10' : 'border-slate-200 hover:border-indigo-300'}`}>
+                    {selectedImage ? (
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-white">
+                        <img src={selectedImage} alt="Preview" className="w-full h-full object-contain" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold tracking-widest">{t.change}</div>
+                      </div>
+                    ) : (
+                      <div className="py-4 flex flex-col items-center gap-1">
+                        <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{lang === 'en' ? 'Upload Photo' : 'رفع الصورة'}</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="py-6 flex flex-col items-center gap-2">
-                    <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>
-                    <p className="text-xs text-slate-500 font-bold uppercase">{t.upload}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">{t.uploadLogo}</label>
+                <div className="relative group">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <div className={`border-2 border-dashed rounded-xl p-3 transition-all bg-white ${selectedLogo ? 'border-indigo-400 bg-indigo-50/10' : 'border-slate-200 hover:border-indigo-300'}`}>
+                    {selectedLogo ? (
+                      <div className="relative aspect-[4/1] rounded-lg overflow-hidden bg-white">
+                        <img src={selectedLogo} alt="Logo Preview" className="w-full h-full object-contain" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold tracking-widest">{t.change}</div>
+                      </div>
+                    ) : (
+                      <div className="py-2 flex flex-col items-center gap-1">
+                        <svg className="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.172 13.828a4 4 0 015.656 0l4 4a4 4 0 11-5.656 5.656l-1.102-1.101" /></svg>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{lang === 'en' ? 'Add Logo' : 'إضافة شعار'}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </section>
 
+          {/* Step 2: Templates */}
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center justify-center gap-2 relative">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">2</span>
@@ -386,8 +435,7 @@ const App: React.FC = () => {
                 + {lang === 'en' ? 'Style' : 'نمط'}
               </Button>
             </h2>
-            
-            <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+            <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
               <div className="relative group/tooltip">
                 <button 
                   onClick={() => setSelectedTemplate('none')}
@@ -395,12 +443,7 @@ const App: React.FC = () => {
                 >
                   {t.customOnly}
                 </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
-                  {t.customDesc}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
-                </div>
               </div>
-
               {Object.entries(categorizedTemplates).map(([category, templates]) => (
                 <div key={category} className="space-y-2">
                   <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2 bg-slate-50/50 p-1 rounded">
@@ -437,6 +480,7 @@ const App: React.FC = () => {
             </div>
           </section>
 
+          {/* Step 3: Config */}
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">3</span>
@@ -482,7 +526,15 @@ const App: React.FC = () => {
               <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">{t.workspace}</h2>
               <p className="text-sm text-slate-500 font-medium mt-2">{t.resultsDesc}</p>
             </div>
-            <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600">{results.length} {t.saved}</span>
+            <div className="flex items-center gap-3">
+               <button 
+                onClick={() => setResults([])} 
+                className="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase transition-colors"
+               >
+                 {t.clearHistory}
+               </button>
+               <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600">{results.length} {t.saved}</span>
+            </div>
           </div>
 
           {results.length === 0 && !isGenerating ? (
@@ -513,15 +565,30 @@ const App: React.FC = () => {
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                       </Button>
                     </div>
+                    {/* Independent Job Metadata Badge */}
+                    <div className="absolute bottom-4 left-4 flex gap-2">
+                       <span className="px-2 py-1 bg-black/60 backdrop-blur-md text-white text-[9px] font-black rounded uppercase tracking-tighter">
+                         {img.resolution}
+                       </span>
+                       <span className="px-2 py-1 bg-white/80 backdrop-blur-md text-slate-900 text-[9px] font-black rounded uppercase tracking-tighter border border-slate-200">
+                         {img.aspectRatio}
+                       </span>
+                    </div>
                   </div>
                   <div className="p-6">
                     <div className="flex justify-between items-start gap-4 mb-3">
-                       <h3 className="text-sm font-black text-slate-800 leading-tight flex-1">"{img.prompt}"</h3>
+                       <div className="flex-1 space-y-1">
+                          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{img.templateLabel}</p>
+                          <h3 className="text-sm font-bold text-slate-800 leading-tight">"{img.prompt || 'Clean Session'}"</h3>
+                       </div>
                        <span className="text-[10px] font-black text-slate-400 uppercase shrink-0">{new Date(img.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                        <span className="text-[9px] font-black tracking-widest bg-slate-100 text-slate-500 px-2 py-1 rounded">{t.proMastered}</span>
                        <span className="text-[9px] font-black tracking-widest bg-indigo-50 text-indigo-600 px-2 py-1 rounded">{img.tokensUsed} {t.tokens}</span>
+                       {img.hasLogo && (
+                         <span className="text-[9px] font-black tracking-widest bg-amber-50 text-amber-600 px-2 py-1 rounded">BRANDED</span>
+                       )}
                     </div>
                   </div>
                 </div>

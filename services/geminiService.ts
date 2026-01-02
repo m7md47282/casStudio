@@ -2,31 +2,26 @@
 import { GoogleGenAI } from "@google/genai";
 import { GenerationParams, Resolution, PHOTO_TEMPLATES, PhotoTemplate } from "../types";
 
+/**
+ * Generates a professional product photo using Gemini models.
+ * Each call is strictly independent and stateless.
+ */
 export const generateProductPhoto = async (params: GenerationParams): Promise<string> => {
-  const { prompt, templateId, resolution, aspectRatio, base64Image } = params;
+  const { prompt, templateId, resolution, aspectRatio, base64Image, logoBase64 } = params;
   
+  // Create a fresh instance for every single call to ensure zero state shared between generations
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const modelName = (resolution === Resolution.R2K || resolution === Resolution.R4K) 
     ? 'gemini-3-pro-image-preview' 
     : 'gemini-2.5-flash-image';
 
-  // Construct the final prompt
-  // NOTE: In the current structure, geminiService doesn't have access to App's userTemplates state directly.
-  // We'll search in static templates first. If not found, we rely on the prompt being passed or we'd need to pass the template object.
-  // To fix this cleanly, let's find the template from a merged list passed or handle prompt construction in App.tsx.
-  // Let's assume for simplicity we try to find it in default templates, otherwise the finalPrompt will use standard base.
-  
+  // Construct the final prompt specifically for this individual job
   const selectedTemplate = PHOTO_TEMPLATES.find(t => t.id === templateId);
-  
-  // If template is userCreated, the UI should have merged the base already? 
-  // No, let's make the service more robust by accepting the full promptBase if templateId is custom.
-  // Actually, a better pattern is to let the service just handle the prompt provided.
   
   let finalPrompt = selectedTemplate ? selectedTemplate.promptBase : 'Professional studio product photography.';
   
-  // If it's a user template, it won't be in static PHOTO_TEMPLATES.
-  // Let's check localstorage here as a fallback or assume the caller should have resolved it.
+  // Check localstorage fallback for user templates if not in static list
   if (!selectedTemplate && templateId && templateId !== 'none') {
     const saved = localStorage.getItem('cas_user_templates');
     if (saved) {
@@ -37,16 +32,21 @@ export const generateProductPhoto = async (params: GenerationParams): Promise<st
   }
 
   if (prompt && prompt.trim()) {
-    finalPrompt += ` Additional scene context: ${prompt}.`;
+    finalPrompt += ` Additional unique scene context: ${prompt}.`;
+  }
+
+  if (logoBase64) {
+    finalPrompt += ` ACTION: Place the provided secondary logo image onto the product in the primary photo. Replace any existing visible branding with this exact logo. Maintain photorealistic perspective, lighting, and texture integration.`;
   }
   
-  finalPrompt += " Ensure the original product from the image is preserved and integrated naturally into the new professional scene. High quality, commercially viable, sharp focus.";
+  finalPrompt += " QUALITY CONTROL: Ensure the original product structure is preserved. Integrate it naturally into the new professional environment. Output must be high-end commercial quality with sharp focus.";
 
   try {
-    const contents: any[] = [];
+    const parts: any[] = [];
     
+    // Add main product image - scoped only to this request
     if (base64Image) {
-      contents.push({
+      parts.push({
         inlineData: {
           data: base64Image.split(',')[1],
           mimeType: 'image/png',
@@ -54,11 +54,23 @@ export const generateProductPhoto = async (params: GenerationParams): Promise<st
       });
     }
 
-    contents.push({ text: finalPrompt });
+    // Add logo image if present - scoped only to this request
+    if (logoBase64) {
+      parts.push({
+        inlineData: {
+          data: logoBase64.split(',')[1],
+          mimeType: 'image/png',
+        },
+      });
+      parts.push({ text: "REFERENCED LOGO: Apply this to the product above." });
+    }
 
+    parts.push({ text: finalPrompt });
+
+    // One-shot execution (no chat context) ensures isolation
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: { parts: contents },
+      contents: { parts: parts },
       config: {
         imageConfig: {
           aspectRatio: aspectRatio,
@@ -75,12 +87,12 @@ export const generateProductPhoto = async (params: GenerationParams): Promise<st
       }
     }
 
-    throw new Error("No image was returned by the model.");
+    throw new Error("Isolated generation job completed but returned no image data.");
   } catch (error: any) {
     if (error.message?.includes("Requested entity was not found")) {
       throw new Error("API_KEY_EXPIRED");
     }
-    console.error("Gemini Generation Error:", error);
+    console.error("Gemini Isolated Generation Error:", error);
     throw error;
   }
 };

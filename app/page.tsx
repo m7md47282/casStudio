@@ -17,11 +17,12 @@ const translations = {
     title: "CasStudio",
     subtitle: "AI-Powered E-Commerce Assets",
     configure: "Configure Key",
-    step1: "Source Image",
+    step1: "Visual Assets",
     step2: "Style Template",
     step3: "Fine-tune & Export",
-    upload: "Upload Product",
-    change: "CHANGE PHOTO",
+    uploadProduct: "Upload Product",
+    uploadLogo: "Brand Logo (Optional)",
+    change: "CHANGE",
     customOnly: "Custom Only",
     customDesc: "No template. Fully rely on your custom description to build the scene from scratch.",
     context: "Custom Context (Optional)",
@@ -47,11 +48,12 @@ const translations = {
     title: "كاس استوديو",
     subtitle: "أصول التجارة الإلكترونية بالذكاء الاصطناعي",
     configure: "إعداد المفتاح",
-    step1: "صورة المنتج",
+    step1: "الأصول المرئية",
     step2: "قالب النمط",
     step3: "الضبط والتصدير",
-    upload: "رفع المنتج",
-    change: "تغيير الصورة",
+    uploadProduct: "رفع المنتج",
+    uploadLogo: "شعار العلامة (اختياري)",
+    change: "تغيير",
     customOnly: "تخصيص فقط",
     customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص لبناء المشهد من الصفر.",
     context: "سياق مخصص (اختياري)",
@@ -132,6 +134,7 @@ export default function CasStudioPage() {
   const [lang, setLang] = useState<Language>('en');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
   const [results, setResults] = useState<GeneratedImage[]>([]);
   const [prompt, setPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>('none');
@@ -172,12 +175,16 @@ export default function CasStudioPage() {
     checkKey();
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'product' | 'logo') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
+        if (type === 'product') {
+          setSelectedImage(reader.result as string);
+        } else {
+          setSelectedLogo(reader.result as string);
+        }
         setError(null);
       };
       reader.readAsDataURL(file);
@@ -185,7 +192,12 @@ export default function CasStudioPage() {
   };
 
   const handleGenerate = async () => {
-    if (selectedTemplate === 'none' && !prompt.trim()) {
+    if (!selectedImage) {
+      setError(lang === 'en' ? "Please upload a product photo." : "يرجى رفع صورة المنتج.");
+      return;
+    }
+
+    if (selectedTemplate === 'none' && !prompt.trim() && !selectedLogo) {
       setError(t.errorSelect);
       return;
     }
@@ -203,22 +215,34 @@ export default function CasStudioPage() {
     setError(null);
 
     try {
+      // Capture current state values
+      const currentResolution = resolution;
+      const currentAspectRatio = aspectRatio;
+      const currentLogo = selectedLogo;
+
       const response = await generateProductPhotoAction({
         prompt,
         templateId: selectedTemplate !== 'none' ? selectedTemplate : undefined,
-        resolution,
-        aspectRatio,
-        base64Image: selectedImage || undefined,
+        resolution: currentResolution,
+        aspectRatio: currentAspectRatio,
+        base64Image: selectedImage,
+        logoBase64: currentLogo || undefined,
       });
 
       const selectedT = PHOTO_TEMPLATES.find(t => t.id === selectedTemplate);
       const templateLabel = selectedT ? selectedT.label[lang] : (lang === 'en' ? 'Custom' : 'مخصص');
-      const displayPrompt = prompt.trim() ? `${templateLabel}: ${prompt}` : templateLabel;
+      const logoTag = currentLogo ? (lang === 'en' ? " + Logo" : " + شعار") : "";
+      const displayPrompt = prompt.trim() ? `${templateLabel}${logoTag}: ${prompt}` : `${templateLabel}${logoTag}`;
 
+      // Fix: Included missing properties required by GeneratedImage interface
       const newResult: GeneratedImage = {
         id: Date.now().toString(),
         url: response.imageUrl,
         prompt: displayPrompt,
+        templateLabel,
+        resolution: currentResolution,
+        aspectRatio: currentAspectRatio,
+        hasLogo: !!currentLogo,
         timestamp: Date.now(),
         tokensUsed: response.tokensUsed,
         modelType: response.modelType
@@ -288,29 +312,59 @@ export default function CasStudioPage() {
 
       <main className="flex-1 flex flex-col lg:flex-row p-6 gap-8 max-w-screen-2xl mx-auto w-full">
         <aside className="w-full lg:w-[420px] flex flex-col gap-6 shrink-0 h-fit lg:sticky lg:top-[88px]">
+          {/* Step 1: Visual Assets */}
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">1</span>
               {t.step1}
             </h2>
-            <div className="relative group">
-              <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-              <div className={`border-2 border-dashed rounded-xl p-4 transition-all bg-white ${selectedImage ? 'border-indigo-400 bg-indigo-50/10' : 'border-slate-200 hover:border-indigo-300'}`}>
-                {selectedImage ? (
-                  <div className="relative aspect-video rounded-lg overflow-hidden bg-white">
-                    <img src={selectedImage} alt="Preview" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">{t.change}</div>
+            
+            <div className="space-y-4">
+              {/* Product Photo Upload */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">{t.uploadProduct}</label>
+                <div className="relative group">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'product')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <div className={`border-2 border-dashed rounded-xl p-3 transition-all bg-white ${selectedImage ? 'border-indigo-400 bg-indigo-50/10' : 'border-slate-200 hover:border-indigo-300'}`}>
+                    {selectedImage ? (
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-white">
+                        <img src={selectedImage} alt="Product Preview" className="w-full h-full object-contain" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold tracking-widest">{t.change}</div>
+                      </div>
+                    ) : (
+                      <div className="py-4 flex flex-col items-center gap-1">
+                        <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{lang === 'en' ? 'Upload Photo' : 'رفع الصورة'}</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="py-6 flex flex-col items-center gap-2">
-                    <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>
-                    <p className="text-xs text-slate-500 font-bold uppercase">{t.upload}</p>
+                </div>
+              </div>
+
+              {/* Logo Upload */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">{t.uploadLogo}</label>
+                <div className="relative group">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <div className={`border-2 border-dashed rounded-xl p-3 transition-all bg-white ${selectedLogo ? 'border-indigo-400 bg-indigo-50/10' : 'border-slate-200 hover:border-indigo-300'}`}>
+                    {selectedLogo ? (
+                      <div className="relative aspect-[4/1] rounded-lg overflow-hidden bg-white">
+                        <img src={selectedLogo} alt="Logo Preview" className="w-full h-full object-contain" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold tracking-widest">{t.change}</div>
+                      </div>
+                    ) : (
+                      <div className="py-2 flex flex-col items-center gap-1">
+                        <svg className="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.172 13.828a4 4 0 015.656 0l4 4a4 4 0 11-5.656 5.656l-1.102-1.101" /></svg>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{lang === 'en' ? 'Add Logo' : 'إضافة شعار'}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </section>
 
+          {/* Step 2: Templates */}
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">2</span>
@@ -359,6 +413,7 @@ export default function CasStudioPage() {
             </div>
           </section>
 
+          {/* Step 3: Export Settings */}
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">3</span>

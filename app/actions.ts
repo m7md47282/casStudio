@@ -5,7 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 import { GenerationParams, Resolution, PHOTO_TEMPLATES } from "../types";
 
 export async function generateProductPhotoAction(params: GenerationParams): Promise<{ imageUrl: string; tokensUsed: number; modelType: 'flash' | 'pro' }> {
-  const { prompt, templateId, resolution, aspectRatio, base64Image } = params;
+  const { prompt, templateId, resolution, aspectRatio, base64Image, logoBase64 } = params;
   
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
@@ -18,14 +18,18 @@ export async function generateProductPhotoAction(params: GenerationParams): Prom
   if (prompt && prompt.trim()) {
     finalPrompt += ` Additional scene context: ${prompt}.`;
   }
+
+  if (logoBase64) {
+    finalPrompt += ` Please place the provided logo image onto the product in the photo. If the product already has a logo, replace it with this one. Ensure the logo matches the product curvature, lighting, and texture for a seamless commercial look.`;
+  }
   
   finalPrompt += " Ensure the original product from the image is preserved and integrated naturally into the new professional scene. High quality, commercially viable, sharp focus.";
 
   try {
-    const contents: any[] = [];
+    const parts: any[] = [];
     
     if (base64Image) {
-      contents.push({
+      parts.push({
         inlineData: {
           data: base64Image.split(',')[1],
           mimeType: 'image/png',
@@ -33,18 +37,28 @@ export async function generateProductPhotoAction(params: GenerationParams): Prom
       });
     }
 
-    contents.push({ text: finalPrompt });
+    if (logoBase64) {
+      parts.push({
+        inlineData: {
+          data: logoBase64.split(',')[1],
+          mimeType: 'image/png',
+        },
+      });
+      parts.push({ text: "This is the logo for replacement/placement." });
+    }
+
+    parts.push({ text: finalPrompt });
 
     // Pre-calculate tokens
     const tokenCountResponse = await ai.models.countTokens({
       model: modelName,
-      contents: [{ parts: contents }]
+      contents: [{ parts: parts }]
     });
     const tokensUsed = tokenCountResponse.totalTokens || 0;
 
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: { parts: contents },
+      contents: { parts: parts },
       config: {
         imageConfig: {
           aspectRatio: aspectRatio,

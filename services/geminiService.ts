@@ -3,60 +3,57 @@ import { GoogleGenAI } from "@google/genai";
 import { GenerationParams, Resolution, PHOTO_TEMPLATES, PhotoTemplate } from "../types";
 
 /**
- * Generates a professional product photo using Gemini models.
- * Each call is strictly independent and stateless.
+ * Generates or edits a product photo using Gemini models.
+ * Handles Studio (generation), Remaster (fixing artifacts), and Upscale (resolution enhancement).
  */
 export const generateProductPhoto = async (params: GenerationParams): Promise<string> => {
   const { prompt, templateId, resolution, aspectRatio, base64Image, logoBase64, backgroundBase64 } = params;
   
-  // Create a fresh instance for every single call to ensure zero state shared between generations
+  // Create a fresh instance for every single call to ensure zero state shared
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const modelName = (resolution === Resolution.R2K || resolution === Resolution.R4K) 
-    ? 'gemini-3-pro-image-preview' 
-    : 'gemini-2.5-flash-image';
+  const isPro = resolution === Resolution.R2K || resolution === Resolution.R4K;
+  const modelName = isPro ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
 
-  // Construct the final prompt specifically for this individual job
   const selectedTemplate = PHOTO_TEMPLATES.find(t => t.id === templateId);
+  let finalPrompt = selectedTemplate ? selectedTemplate.promptBase : 'Professional high-end commercial product photography.';
   
-  let finalPrompt = selectedTemplate ? selectedTemplate.promptBase : 'Professional high-end commercial studio product photography.';
-  
-  // Check localstorage fallback for user templates if not in static list
-  if (!selectedTemplate && templateId && templateId !== 'none') {
-    const saved = localStorage.getItem('cas_user_templates');
-    if (saved) {
-      const userTemplates: PhotoTemplate[] = JSON.parse(saved);
-      const userT = userTemplates.find(t => t.id === templateId);
-      if (userT) finalPrompt = userT.promptBase;
+  // Logic for Remaster/Upscale detection based on prompt prefixes or absence of template
+  const isUpscale = prompt?.includes("STRICT UPSCALE TASK");
+  const isRemaster = prompt?.includes("REMASTER TASK");
+
+  if (isUpscale) {
+    finalPrompt = prompt; // Use the specialized upscale prompt directly
+  } else if (isRemaster) {
+    finalPrompt = prompt; // Use the specialized remaster prompt directly
+  } else {
+    // Normal Studio mode
+    if (prompt && prompt.trim()) {
+      finalPrompt += ` Additionally, follow these specific details: ${prompt}.`;
+    }
+    
+    if (backgroundBase64) {
+      finalPrompt += ` BACKGROUND MERGING: Seamlessly place the product from the source image into the provided custom background. Ensure realistic contact shadows and environmental lighting matching.`;
     }
   }
 
-  // Inject additional custom context if provided
-  if (prompt && prompt.trim()) {
-    finalPrompt += ` Additionally, follow these specific details: ${prompt}.`;
-  }
-
-  // Handle background merging instruction
-  if (backgroundBase64) {
-    finalPrompt += ` BACKGROUND MERGING INSTRUCTION: Place the product from the SOURCE PRODUCT IMAGE into the provided CUSTOM BACKGROUND IMAGE. Seamlessly blend the product into the background. Adjust lighting on the product to match the background environment. Create realistic shadows and reflections where the product meets the background surface. The final image must look like a professional composite where the product was always there.`;
-  }
-
-  // Handle logo placement instruction
-  if (logoBase64) {
-    finalPrompt += ` BRANDING INSTRUCTION: Place the provided secondary logo image onto the product in the final photo. Replace any existing visible branding with this exact logo. Maintain photorealistic perspective, matching curvature, lighting, and texture integration for a seamless result.`;
+  // Handle logo placement instruction globally if provided
+  if (logoBase64 && !isUpscale) {
+    finalPrompt += ` BRANDING: Place the provided logo image onto the product. Replace any existing branding. Match the surface curvature, lighting, and texture for a 100% photorealistic result.`;
   }
   
-  // Global Quality Control
-  finalPrompt += `\nSTRICT QUALITY GUIDELINES:
-  1. Maintain the original product's exact shape, silhouette, and core design features from the source image.
-  2. Seamlessly integrate the product into the environment with realistic contact shadows and light reflections.
-  3. Ensure 8k resolution detail, sharp focus, and zero noise.
-  4. Output must look like a high-end commercial asset suitable for a luxury e-shop or magazine.`;
+  // Strict Quality Enforcement
+  if (!isUpscale) {
+    finalPrompt += `\nSTRICT QUALITY GUIDELINES:
+    1. Preserve the product's core identity, shape, and silhouette.
+    2. Render in ${resolution} resolution with editorial-grade sharpness.
+    3. Ensure physically accurate lighting and shadows.
+    4. Output must be commercial-ready with zero AI artifacts.`;
+  }
 
   try {
     const parts: any[] = [];
     
-    // Add main product image - scoped only to this request
     if (base64Image) {
       parts.push({
         inlineData: {
@@ -64,42 +61,38 @@ export const generateProductPhoto = async (params: GenerationParams): Promise<st
           mimeType: 'image/png',
         },
       });
-      parts.push({ text: "SOURCE PRODUCT IMAGE: This is the product to be re-photographed." });
+      parts.push({ text: "SOURCE IMAGE: This is the reference for the task." });
     }
 
-    // Add background image if present
-    if (backgroundBase64) {
+    if (backgroundBase64 && !isUpscale && !isRemaster) {
       parts.push({
         inlineData: {
           data: backgroundBase64.split(',')[1],
           mimeType: 'image/png',
         },
       });
-      parts.push({ text: "CUSTOM BACKGROUND IMAGE: Use this as the environment for the product." });
+      parts.push({ text: "CUSTOM BACKGROUND: Use this environment." });
     }
 
-    // Add logo image if present - scoped only to this request
-    if (logoBase64) {
+    if (logoBase64 && !isUpscale) {
       parts.push({
         inlineData: {
           data: logoBase64.split(',')[1],
           mimeType: 'image/png',
         },
       });
-      parts.push({ text: "BRAND LOGO: Apply this logo to the product surface naturally." });
+      parts.push({ text: "BRAND LOGO: Apply this to the product." });
     }
 
-    // The core prompt
     parts.push({ text: finalPrompt });
 
-    // One-shot execution (no chat context) ensures isolation
     const response = await ai.models.generateContent({
       model: modelName,
       contents: { parts: parts },
       config: {
         imageConfig: {
           aspectRatio: aspectRatio,
-          ...(modelName === 'gemini-3-pro-image-preview' ? { imageSize: resolution } : {}),
+          ...(isPro ? { imageSize: resolution } : {}),
         },
       },
     });
@@ -112,12 +105,12 @@ export const generateProductPhoto = async (params: GenerationParams): Promise<st
       }
     }
 
-    throw new Error("Isolated generation job completed but returned no image data.");
+    throw new Error("Generation completed but returned no image data.");
   } catch (error: any) {
     if (error.message?.includes("Requested entity was not found")) {
       throw new Error("API_KEY_EXPIRED");
     }
-    console.error("Gemini Isolated Generation Error:", error);
+    console.error("Gemini Generation Error:", error);
     throw error;
   }
 };

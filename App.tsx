@@ -20,12 +20,13 @@ const translations = {
     landingSub: "Rely on CasStudio for year-round editorial photography. Turn your smartphone shots into premium commercial assets.",
     ctaHero: "Explore benefits",
     openStudio: "Open Studio",
-    openEdit: "Remaster Studio",
+    openRemaster: "Remaster Studio",
+    openUpscale: "Upscale Studio",
     configure: "Configure Key",
     step1: "Visual Assets",
     step2: "Style Template",
     step3: "Fine-tune & Export",
-    uploadProduct: "Upload Product",
+    uploadProduct: "Upload Source Image",
     uploadLogo: "Brand Logo (Optional)",
     uploadBackground: "Custom Background (Optional)",
     render: "RENDER PRODUCT",
@@ -68,7 +69,13 @@ const translations = {
     remasterPrompt: "What needs to be fixed? (e.g., 'Change text to: Pro Hydrate')",
     correctText: "Correct Text Content",
     fontStyle: "Preferred Font Style",
-    fixBtn: "REMASTER IMAGE"
+    fixBtn: "REMASTER IMAGE",
+    upscaleTitle: "4K Upscale Studio",
+    upscaleDesc: "Enhance resolution and clarity without changing your image.",
+    upscaleBtn: "UPSCALE TO 4K",
+    upscaleInstruction: "The AI will strictly increase the detail and sharpness of your original image to the selected resolution (2K/4K) while preserving every single pixel's intent.",
+    quality: "Quality",
+    format: "Format"
   },
   ar: {
     title: "كاس استوديو",
@@ -77,12 +84,13 @@ const translations = {
     landingSub: "اعتمد على كاس استوديو للحصول على تصوير تحريري احترافي. حول لقطات هاتفك إلى أصول تجارية فاخرة.",
     ctaHero: "اكتشف المميزات",
     openStudio: "افتح الاستوديو",
-    openEdit: "استوديو التعديل",
+    openRemaster: "استوديو التعديل",
+    openUpscale: "استوديو رفع الدقة",
     configure: "إعداد المفتاح",
     step1: "الأصول المرئية",
     step2: "قالب النمط",
     step3: "الضبط والتصدير",
-    uploadProduct: "رفع المنتج",
+    uploadProduct: "رفع الصورة المصدر",
     uploadLogo: "شعار العلامة (اختياري)",
     uploadBackground: "خلفية مخصصة (اختياري)",
     render: "بدء المعالجة",
@@ -125,7 +133,13 @@ const translations = {
     remasterPrompt: "ما الذي يجب تصحيحه؟ (مثلاً: 'تغيير النص إلى: برو هايدريت')",
     correctText: "محتوى النص الصحيح",
     fontStyle: "نمط الخط المفضل",
-    fixBtn: "إعادة معالجة الصورة"
+    fixBtn: "إعادة معالجة الصورة",
+    upscaleTitle: "استوديو رفع الدقة 4K",
+    upscaleDesc: "تحسين الدقة والوضوح دون تغيير صورتك.",
+    upscaleBtn: "رفع الدقة إلى 4K",
+    upscaleInstruction: "سيقوم الذكاء الاصطناعي بزيادة تفاصيل ووضوح صورتك الأصلية إلى الدقة المختارة (2K/4K) مع الحفاظ على كل عنصر تماماً كما هو.",
+    quality: "الجودة",
+    format: "التنسيق"
   }
 };
 
@@ -242,7 +256,7 @@ const BeforeAfterSlider: React.FC<{ lang: Language }> = ({ lang }) => {
 };
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'landing' | 'studio' | 'remaster'>('landing');
+  const [view, setView] = useState<'landing' | 'studio' | 'remaster' | 'upscale'>('landing');
   const [lang, setLang] = useState<Language>('en');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -280,7 +294,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkKeyOnMount = async () => {
-      if ((view === 'studio' || view === 'remaster') && window.aistudio) {
+      if ((view === 'studio' || view === 'remaster' || view === 'upscale') && window.aistudio) {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         if (!hasKey) {
           await window.aistudio.openSelectKey();
@@ -328,9 +342,9 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = async () => {
-    if (!selectedImage) { setError(lang === 'en' ? "Upload product." : "ارفع المنتج."); return; }
+    if (!selectedImage) { setError(lang === 'en' ? "Upload source image." : "ارفع الصورة المصدر."); return; }
     
-    if (resolution === Resolution.R2K || resolution === Resolution.R4K) {
+    if (view === 'upscale' || resolution === Resolution.R2K || resolution === Resolution.R4K) {
       if (window.aistudio) {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         if (!hasKey) {
@@ -342,30 +356,39 @@ const App: React.FC = () => {
     setIsGenerating(true);
     setError(null);
     try {
-      // Construction for Remaster mode if applicable
       let combinedPrompt = prompt;
+      
       if (view === 'remaster') {
-        combinedPrompt = `REMASTER TASK: Fix the following visual artifacts in the provided image. `;
-        if (correctText) combinedPrompt += `CORRECT TEXT: The text on the product should be "${correctText}". `;
+        combinedPrompt = `REMASTER TASK: Repair the provided image. The current text or logos are incorrect. `;
+        if (correctText) combinedPrompt += `CORRECT TEXT CONTENT: Replace visible text with exactly "${correctText}". `;
         if (fontStyle) combinedPrompt += `FONT STYLE: Use a ${fontStyle} typeface. `;
-        combinedPrompt += `MAINTAIN CONSISTENCY: Keep the product shape, lighting, and background exactly as they are in the source image, only update the specified artifacts. `;
+        combinedPrompt += `STRICT FIDELITY: Maintain the exact product silhouette, lighting, and background composition. Only edit the text/branding elements to be pin-sharp and accurate. `;
         if (prompt) combinedPrompt += `Additional context: ${prompt}`;
+      } else if (view === 'upscale') {
+        combinedPrompt = `STRICT UPSCALE TASK: Do not change any content in this image. Do not add or remove elements. Increase the resolution, detail, and clarity of the textures and edges to ${resolution} quality. Maintain 100% fidelity to the original source pixels. High-fidelity super-resolution finish.`;
       }
 
       const imageUrl = await generateProductPhoto({
         prompt: combinedPrompt, 
-        templateId: view === 'remaster' ? 'none' : (selectedTemplate !== 'none' ? selectedTemplate : undefined),
+        templateId: (view === 'remaster' || view === 'upscale') ? 'none' : (selectedTemplate !== 'none' ? selectedTemplate : undefined),
         resolution, 
         aspectRatio, 
         base64Image: selectedImage, 
         logoBase64: selectedLogo || undefined,
         backgroundBase64: selectedBackground || undefined,
       });
+
       const selectedT = PHOTO_TEMPLATES.find(t => t.id === selectedTemplate);
       const isPro = resolution === Resolution.R2K || resolution === Resolution.R4K;
+      
+      let finalLabel = lang === 'en' ? 'Custom' : 'مخصص';
+      if (view === 'remaster') finalLabel = lang === 'en' ? 'Remaster' : 'إعادة معالجة';
+      if (view === 'upscale') finalLabel = lang === 'en' ? 'Upscale' : 'رفع الدقة';
+      else if (selectedT) finalLabel = selectedT.label[lang];
+
       setResults(prev => [{
-        id: Date.now().toString(), url: imageUrl, prompt: combinedPrompt,
-        templateLabel: view === 'remaster' ? (lang === 'en' ? 'Remaster' : 'إعادة معالجة') : (selectedT ? selectedT.label[lang] : (lang === 'en' ? 'Custom' : 'مخصص')),
+        id: Date.now().toString(), url: imageUrl, prompt: combinedPrompt || finalLabel,
+        templateLabel: finalLabel,
         resolution, aspectRatio, hasLogo: !!selectedLogo,
         timestamp: Date.now(), tokensUsed: isPro ? 3500 : 1800, modelType: isPro ? 'pro' : 'flash'
       }, ...prev]);
@@ -398,15 +421,21 @@ const App: React.FC = () => {
           <h1 className="text-4xl md:text-8xl font-medium tracking-tight text-slate-900 mb-6 md:mb-8 leading-[1.1] md:leading-[1.05]" 
               dangerouslySetInnerHTML={{ __html: t.landingTitle }}></h1>
           <p className="text-sm md:text-lg text-slate-500 max-w-xl mx-auto mb-8 md:mb-10 leading-relaxed">{t.landingSub}</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <button onClick={() => setView('studio')} className="group flex items-center gap-3 px-6 py-3 bg-slate-900 text-white border border-slate-900 rounded-full text-xs font-bold hover:bg-slate-800 transition-all">
               {t.openStudio}
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white group-hover:translate-x-1 transition-transform">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
               </div>
             </button>
+            <button onClick={() => setView('upscale')} className="group flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white border border-indigo-600 rounded-full text-xs font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-100">
+              {t.openUpscale}
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" /></svg>
+              </div>
+            </button>
             <button onClick={() => setView('remaster')} className="group flex items-center gap-3 px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-full text-xs font-bold hover:bg-slate-50 transition-all">
-              {t.openEdit}
+              {t.openRemaster}
               <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
               </div>
@@ -433,6 +462,57 @@ const App: React.FC = () => {
         </div>
       </section>
 
+      <section className="reveal-section py-16 md:py-32 px-6 bg-slate-50 border-y border-slate-100 overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row gap-12 md:gap-20 items-center">
+            <div className="flex-1 reveal-item space-y-6 md:space-y-8">
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">services<sup>[02]</sup></p>
+               <h2 className="text-3xl md:text-5xl font-medium tracking-tight text-slate-900 leading-tight" 
+                   dangerouslySetInnerHTML={{ __html: t.beforeAfterTitle }}></h2>
+               <p className="text-base md:text-lg text-slate-500 leading-relaxed">{t.beforeAfterSub}</p>
+               
+               <div className="grid grid-cols-2 gap-3 md:gap-4">
+                 <div className="p-4 md:p-6 bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm space-y-1 md:space-y-2">
+                    <p className="text-[8px] md:text-[9px] font-black text-indigo-500 uppercase tracking-widest">RE-LIGHTING</p>
+                    <p className="text-xs md:text-sm font-bold text-slate-800">Dynamic 3D Shadows</p>
+                 </div>
+                 <div className="p-4 md:p-6 bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm space-y-1 md:space-y-2">
+                    <p className="text-[8px] md:text-[9px] font-black text-indigo-500 uppercase tracking-widest">TEXTURING</p>
+                    <p className="text-xs md:text-sm font-bold text-slate-800">High-Fidelity Cloth</p>
+                 </div>
+               </div>
+            </div>
+            
+            <div className="flex-1 w-full reveal-item">
+              <BeforeAfterSlider lang={lang} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="value-prop-section py-16 md:py-32 px-6 max-w-7xl mx-auto">
+        <div className="text-center mb-12 md:mb-20">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">benefits<sup>[03]</sup></p>
+          <h2 className="text-3xl md:text-5xl font-medium tracking-tight text-slate-900 mb-4 md:mb-6 leading-tight" 
+              dangerouslySetInnerHTML={{ __html: t.valuePropTitle }}></h2>
+          <p className="text-sm md:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">{t.valuePropSub}</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+          {[
+            { id: '01', title: t.valueSpeed, desc: t.valueSpeedDesc },
+            { id: '02', title: t.valueCost, desc: t.valueCostDesc },
+            { id: '03', title: t.valueQuality, desc: t.valueQualityDesc }
+          ].map((v, i) => (
+            <div key={i} className="value-prop-item space-y-4 md:space-y-6">
+              <div className="w-12 h-12 md:w-14 md:h-14 bg-indigo-50 rounded-xl md:rounded-2xl flex items-center justify-center text-lg md:text-2xl text-indigo-600 font-bold">{v.id}</div>
+              <h3 className="text-lg md:text-xl font-bold text-slate-900">{v.title}</h3>
+              <p className="text-xs md:text-sm text-slate-500 leading-relaxed">{v.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <footer className="py-12 md:py-20 px-6 border-t border-slate-100">
         <p className="text-center text-[8px] md:text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em]">{t.copyright}</p>
       </footer>
@@ -448,20 +528,29 @@ const App: React.FC = () => {
           <div className="w-8 h-8 md:w-10 md:h-10 bg-black rounded-lg md:rounded-xl flex items-center justify-center text-white shadow-lg font-bold">C</div>
           <div className="hidden sm:block">
             <h1 className="text-sm md:text-xl font-bold text-slate-900 tracking-tight leading-tight">{t.title}</h1>
-            <p className="text-[10px] md:text-xs text-slate-500 font-medium tracking-tight leading-tight">{view === 'studio' ? t.subtitle : t.remasterTitle}</p>
+            <p className="text-[10px] md:text-xs text-slate-500 font-medium tracking-tight leading-tight">
+              {view === 'studio' ? t.subtitle : (view === 'remaster' ? t.remasterTitle : t.upscaleTitle)}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center bg-slate-100 p-1 rounded-full border border-slate-200">
+        {/* Global Nav Toggles */}
+        <div className="flex items-center bg-slate-100 p-1 rounded-full border border-slate-200 overflow-x-auto max-w-[50%] no-scrollbar">
           <button 
             onClick={() => setView('studio')} 
-            className={`px-4 py-1.5 text-[10px] font-bold rounded-full transition-all ${view === 'studio' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-4 py-1.5 text-[9px] md:text-[10px] font-bold rounded-full transition-all whitespace-nowrap ${view === 'studio' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
           >
             STUDIO
           </button>
           <button 
+            onClick={() => setView('upscale')} 
+            className={`px-4 py-1.5 text-[9px] md:text-[10px] font-bold rounded-full transition-all whitespace-nowrap ${view === 'upscale' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            UPSCALE 4K
+          </button>
+          <button 
             onClick={() => setView('remaster')} 
-            className={`px-4 py-1.5 text-[10px] font-bold rounded-full transition-all ${view === 'remaster' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-4 py-1.5 text-[9px] md:text-[10px] font-bold rounded-full transition-all whitespace-nowrap ${view === 'remaster' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
           >
             REMASTER
           </button>
@@ -479,7 +568,7 @@ const App: React.FC = () => {
           <section className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100">
             <h2 className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-slate-300 mb-4 md:mb-6 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">1</span>
-              {view === 'remaster' ? (lang === 'en' ? 'Upload Image to Fix' : 'رفع الصورة للتصحيح') : t.step1}
+              {view === 'upscale' ? (lang === 'en' ? 'Source Image' : 'الصورة المصدر') : (view === 'remaster' ? (lang === 'en' ? 'Render to Correct' : 'الصورة المراد تصحيحها') : t.step1)}
             </h2>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -492,26 +581,28 @@ const App: React.FC = () => {
                         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                         </svg>
-                        <p className="text-[10px] font-bold uppercase">Source Image</p>
+                        <p className="text-[10px] font-bold uppercase">Click to upload</p>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.uploadLogo}</label>
-                <div className="relative group">
-                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                  <div className={`border-2 border-dashed rounded-xl md:rounded-2xl p-3 bg-slate-50 transition-all ${selectedLogo ? 'border-black bg-white' : 'border-slate-200'}`}>
-                    {selectedLogo ? <img src={selectedLogo} className="w-full h-10 md:h-12 object-contain" /> : (
-                      <div className="h-10 md:h-12 flex flex-col items-center justify-center gap-1 text-slate-300">
-                        <p className="text-[9px] md:text-[10px] font-bold uppercase">Correct Logo</p>
-                      </div>
-                    )}
+              {view !== 'upscale' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.uploadLogo}</label>
+                  <div className="relative group">
+                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                    <div className={`border-2 border-dashed rounded-xl md:rounded-2xl p-3 bg-slate-50 transition-all ${selectedLogo ? 'border-black bg-white' : 'border-slate-200'}`}>
+                      {selectedLogo ? <img src={selectedLogo} className="w-full h-10 md:h-12 object-contain" /> : (
+                        <div className="h-10 md:h-12 flex flex-col items-center justify-center gap-1 text-slate-300">
+                          <p className="text-[9px] md:text-[10px] font-bold uppercase">Logo File</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </section>
 
@@ -522,7 +613,7 @@ const App: React.FC = () => {
                 {t.step2}
               </h2>
               <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
-                <button onClick={() => setSelectedTemplate('none')} className={`w-full p-2.5 text-[10px] font-bold rounded-xl border transition-all ${selectedTemplate === 'none' ? 'bg-black text-white border-black' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                <button onClick={() => setSelectedTemplate('none')} className={`w-full p-2.5 text-[10px] font-bold rounded-xl border transition-all ${selectedTemplate === 'none' ? 'bg-black text-white border-black shadow-md' : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-slate-300'}`}>
                   {t.customOnly}
                 </button>
                 {Object.entries(categorizedTemplates).map(([category, templates]) => (
@@ -530,7 +621,7 @@ const App: React.FC = () => {
                     <h3 className="text-[9px] font-black uppercase text-slate-300 tracking-widest px-1">{category}</h3>
                     <div className="grid grid-cols-2 gap-2">
                       {templates.map(template => (
-                        <button key={template.id} onClick={() => setSelectedTemplate(template.id)} className={`w-full p-2 text-left text-[10px] font-bold rounded-xl border transition-all ${selectedTemplate === template.id ? 'bg-black text-white' : 'bg-white border-slate-100'}`}>
+                        <button key={template.id} onClick={() => setSelectedTemplate(template.id)} className={`w-full p-2 text-left text-[10px] font-bold rounded-xl border transition-all ${selectedTemplate === template.id ? 'bg-black text-white border-black shadow-md' : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'}`}>
                           {template.label[lang]}
                         </button>
                       ))}
@@ -543,38 +634,54 @@ const App: React.FC = () => {
 
           <section className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 space-y-4">
              <h2 className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">{view === 'studio' ? '3' : '2'}</span>
-              {view === 'studio' ? t.step3 : (lang === 'en' ? 'Correction Details' : 'تفاصيل التصحيح')}
+              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">
+                {view === 'studio' ? '3' : '2'}
+              </span>
+              {view === 'studio' ? t.step3 : (view === 'upscale' ? (lang === 'en' ? 'Upscale Config' : 'إعدادات رفع الدقة') : (lang === 'en' ? 'Correction Details' : 'تفاصيل التصحيح'))}
             </h2>
             
             {view === 'remaster' && (
               <>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">{t.correctText}</label>
-                  <input value={correctText} onChange={(e) => setCorrectText(e.target.value)} placeholder="e.g., 'Fresh Orange Juice'" className="w-full p-3 text-sm rounded-xl border border-slate-100 bg-slate-50 outline-none focus:ring-2 focus:ring-black" />
+                  <input value={correctText} onChange={(e) => setCorrectText(e.target.value)} placeholder="e.g., 'Pro Hair Serum 250ml'" className="w-full p-3 text-sm rounded-xl border border-slate-100 bg-slate-50 outline-none focus:ring-2 focus:ring-black" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">{t.fontStyle}</label>
-                  <input value={fontStyle} onChange={(e) => setFontStyle(e.target.value)} placeholder="e.g., 'Modern Serif', 'Bold Sans'" className="w-full p-3 text-sm rounded-xl border border-slate-100 bg-slate-50 outline-none focus:ring-2 focus:ring-black" />
+                  <input value={fontStyle} onChange={(e) => setFontStyle(e.target.value)} placeholder="e.g., 'Modern Serif', 'Minimalist Sans'" className="w-full p-3 text-sm rounded-xl border border-slate-100 bg-slate-50 outline-none focus:ring-2 focus:ring-black" />
                 </div>
               </>
             )}
 
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={view === 'remaster' ? t.remasterPrompt : t.placeholder} className="w-full h-24 p-3 text-sm rounded-xl border border-slate-100 focus:ring-2 focus:ring-black outline-none bg-slate-50 transition-all" />
+            {view === 'upscale' && (
+              <p className="text-[10px] font-medium text-slate-500 leading-relaxed italic border-l-2 border-indigo-100 pl-3">
+                {t.upscaleInstruction}
+              </p>
+            )}
+
+            {view !== 'upscale' && (
+              <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={view === 'remaster' ? t.remasterPrompt : t.placeholder} className="w-full h-24 p-3 text-sm rounded-xl border border-slate-100 focus:ring-2 focus:ring-black outline-none bg-slate-50 transition-all" />
+            )}
             
             <div className="grid grid-cols-2 gap-2">
-               <select value={resolution} onChange={(e) => setResolution(e.target.value as Resolution)} className="p-2 text-xs font-bold rounded-xl border border-slate-100 bg-white">
-                 <option value={Resolution.R1K}>1K Render</option>
-                 <option value={Resolution.R2K}>2K Studio</option>
-                 <option value={Resolution.R4K}>4K Ultra</option>
-               </select>
-               <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio)} className="p-2 text-xs font-bold rounded-xl border border-slate-100 bg-white">
-                 {Object.values(AspectRatio).map(r => <option key={r} value={r}>{r}</option>)}
-               </select>
+               <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t.quality}</label>
+                  <select value={resolution} onChange={(e) => setResolution(e.target.value as Resolution)} className="w-full p-2 text-xs font-bold rounded-xl border border-slate-100 bg-white">
+                    <option value={Resolution.R1K}>1K Standard</option>
+                    <option value={Resolution.R2K}>2K Studio</option>
+                    <option value={Resolution.R4K}>4K Ultra</option>
+                  </select>
+               </div>
+               <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t.format}</label>
+                  <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio)} className="w-full p-2 text-xs font-bold rounded-xl border border-slate-100 bg-white">
+                    {Object.values(AspectRatio).map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+               </div>
             </div>
             {error && <div className="p-2 bg-red-50 text-red-500 text-[10px] font-bold rounded-xl">{error}</div>}
-            <Button onClick={handleGenerate} className="w-full py-4 text-sm font-bold bg-black text-white hover:bg-slate-800 rounded-2xl" isLoading={isGenerating}>
-              {isGenerating ? "PROCESSING..." : (view === 'studio' ? t.render : t.fixBtn)}
+            <Button onClick={handleGenerate} className="w-full py-4 text-sm font-bold bg-black text-white hover:bg-slate-800 rounded-2xl shadow-xl transition-all" isLoading={isGenerating}>
+              {isGenerating ? "PROCESSING..." : (view === 'studio' ? t.render : (view === 'upscale' ? t.upscaleBtn : t.fixBtn))}
             </Button>
           </section>
         </aside>
@@ -582,4 +689,53 @@ const App: React.FC = () => {
         <section className="flex-1 min-w-0">
           <div className="mb-6 flex items-end justify-between">
             <div>
-              <h2 className="text-3xl font-black text
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">{t.workspace}</h2>
+              <p className="text-sm text-slate-500 font-medium mt-2">
+                {view === 'studio' ? t.resultsDesc : (view === 'upscale' ? t.upscaleDesc : t.remasterDesc)}
+              </p>
+            </div>
+            <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-500">{results.length} SAVED</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+            {isGenerating && (
+              <div className="aspect-square bg-white rounded-[2.5rem] border border-slate-100 flex flex-col items-center justify-center relative overflow-hidden shadow-sm">
+                <div className="absolute inset-0 bg-slate-50 animate-pulse" />
+                <div className="relative z-10 flex flex-col items-center gap-4">
+                  <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    {view === 'remaster' ? 'Remastering textures...' : (view === 'upscale' ? 'Enhancing to 4K...' : 'Rendering studio...')}
+                  </p>
+                </div>
+              </div>
+            )}
+            {results.map((img) => (
+              <div key={img.id} className="group bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-xl">
+                <div className="relative aspect-square bg-slate-50">
+                  <img src={img.url} className="w-full h-full object-contain" alt={img.prompt} />
+                  <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all">
+                    <button onClick={() => { const link = document.createElement('a'); link.href = img.url; link.download = `cas-${img.id}.png`; link.click(); }} 
+                            className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-transform">
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="p-8">
+                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">{img.templateLabel}</p>
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2 italic">
+                    {img.prompt.length > 80 ? img.prompt.substring(0, 80) + '...' : img.prompt}
+                  </h3>
+                  <div className="flex gap-2 mt-4">
+                     <span className="px-3 py-1 bg-slate-50 text-slate-400 text-[9px] font-black rounded-full uppercase">{img.resolution} • {img.aspectRatio}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+};
+
+export default App;

@@ -26,6 +26,7 @@ const translations = {
     step3: "Fine-tune & Export",
     uploadProduct: "Upload Product",
     uploadLogo: "Brand Logo (Optional)",
+    uploadBackground: "Custom Background (Optional)",
     render: "RENDER PRODUCT",
     workspace: "Workspace",
     resultsDesc: "Isolated renders with unique lighting interpretation.",
@@ -75,6 +76,7 @@ const translations = {
     step3: "الضبط والتصدير",
     uploadProduct: "رفع المنتج",
     uploadLogo: "شعار العلامة",
+    uploadBackground: "خلفية مخصصة (اختياري)",
     render: "بدء المعالجة",
     workspace: "ساحة العمل",
     resultsDesc: "معالجة مستقلة لكل صورة.",
@@ -111,6 +113,44 @@ const translations = {
     customOnly: "مخصص فقط",
     customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص لبناء المشهد من الصفر."
   }
+};
+
+const HeroImages = {
+  Tshirt: () => (
+    <div className="w-full h-full bg-slate-900 flex items-center justify-center p-8">
+      <div className="relative w-full h-full">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-800 to-slate-950 flex items-center justify-center">
+          <svg className="w-4/5 h-4/5 text-slate-700 opacity-80" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L4 5V7C4 7 4 10 6 12L12 15L18 12C20 10 20 7 20 7V5L12 2Z" />
+            <rect x="7" y="14" width="10" height="8" rx="1" />
+          </svg>
+        </div>
+        <div className="absolute bottom-6 left-6 text-white/40 text-[8px] font-bold tracking-[0.3em] uppercase">Product Isolation — 01</div>
+      </div>
+    </div>
+  ),
+  Model: () => (
+    <div className="w-full h-full bg-[#E5E1DD] relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-tr from-slate-200 to-slate-100 flex items-end justify-center">
+        <div className="w-3/4 h-5/6 bg-slate-900 rounded-t-full opacity-90 relative">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-20 h-20 bg-[#F5F0EA] rounded-full"></div>
+        </div>
+      </div>
+      <div className="absolute top-6 right-6 text-slate-400 text-[8px] font-bold tracking-[0.3em] uppercase">Lifestyle Render — 02</div>
+    </div>
+  ),
+  Vases: () => (
+    <div className="w-full h-full bg-[#F2EDE7] flex items-center justify-center p-4">
+       <div className="flex gap-4 items-end">
+         <div className="w-12 h-16 bg-white rounded-t-full shadow-lg border border-slate-100"></div>
+         <div className="w-20 h-20 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center">
+           <div className="w-8 h-8 bg-[#F2EDE7] rounded-full"></div>
+         </div>
+         <div className="w-14 h-24 bg-white rounded-t-full shadow-lg border border-slate-100"></div>
+       </div>
+       <div className="absolute bottom-6 right-6 text-slate-400 text-[8px] font-bold tracking-[0.3em] uppercase">Interior Props — 03</div>
+    </div>
+  )
 };
 
 const BeforeAfterSlider: React.FC<{ lang: Language }> = ({ lang }) => {
@@ -193,6 +233,7 @@ const App: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
+  const [selectedBackground, setSelectedBackground] = useState<string | null>(null);
   const [results, setResults] = useState<GeneratedImage[]>([]);
   const [prompt, setPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>('none');
@@ -222,7 +263,6 @@ const App: React.FC = () => {
   }, [lang]);
 
   useEffect(() => {
-    // Mandatory key check for high-quality models if we're in studio
     const checkKeyOnMount = async () => {
       if (view === 'studio' && window.aistudio) {
         const hasKey = await window.aistudio.hasSelectedApiKey();
@@ -257,13 +297,14 @@ const App: React.FC = () => {
     }
   }, [view]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'product' | 'logo') => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'product' | 'logo' | 'background') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
         if (type === 'product') setSelectedImage(reader.result as string);
-        else setSelectedLogo(reader.result as string);
+        else if (type === 'logo') setSelectedLogo(reader.result as string);
+        else setSelectedBackground(reader.result as string);
         setError(null);
       };
       reader.readAsDataURL(file);
@@ -273,13 +314,11 @@ const App: React.FC = () => {
   const handleGenerate = async () => {
     if (!selectedImage) { setError(lang === 'en' ? "Upload product." : "ارفع المنتج."); return; }
     
-    // Check key selection for Gemini 3 Pro mandatory requirement
     if (resolution === Resolution.R2K || resolution === Resolution.R4K) {
       if (window.aistudio) {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         if (!hasKey) {
           await window.aistudio.openSelectKey();
-          // Proceed after trigger as per race condition guidelines
         }
       }
     }
@@ -288,8 +327,13 @@ const App: React.FC = () => {
     setError(null);
     try {
       const imageUrl = await generateProductPhoto({
-        prompt, templateId: selectedTemplate !== 'none' ? selectedTemplate : undefined,
-        resolution, aspectRatio, base64Image: selectedImage, logoBase64: selectedLogo || undefined,
+        prompt, 
+        templateId: selectedTemplate !== 'none' ? selectedTemplate : undefined,
+        resolution, 
+        aspectRatio, 
+        base64Image: selectedImage, 
+        logoBase64: selectedLogo || undefined,
+        backgroundBase64: selectedBackground || undefined,
       });
       const selectedT = PHOTO_TEMPLATES.find(t => t.id === selectedTemplate);
       const isPro = resolution === Resolution.R2K || resolution === Resolution.R4K;
@@ -338,6 +382,7 @@ const App: React.FC = () => {
 
         <div className="block md:hidden mb-12">
           <div className="aspect-[4/5] bg-slate-100 rounded-3xl shadow-xl overflow-hidden relative">
+            <HeroImages.Model />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-6 flex flex-col justify-end text-left text-white">
                <p className="text-[10px] font-medium opacity-70 mb-1">Curation Preview</p>
                <p className="text-xl font-medium leading-tight">Professional lighting everywhere.</p>
@@ -347,24 +392,41 @@ const App: React.FC = () => {
 
         <div className="hidden md:grid hero-cards relative h-[600px] max-w-6xl mx-auto mt-12 grid-cols-12 items-center gap-4">
           <div className="col-span-3 h-[400px] bg-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl relative translate-y-12">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-6 flex flex-col justify-end text-left text-white">
-               <p className="text-xs font-medium opacity-70 mb-2">Editorial Style</p>
-               <p className="text-xl font-medium leading-tight">Professional lighting on velvet texture.</p>
+            <HeroImages.Tshirt />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent p-6 flex flex-col justify-end text-left text-white">
+               <p className="text-xs font-medium opacity-70 mb-2">Apparel Mockup</p>
+               <p className="text-xl font-medium leading-tight tracking-tight">Isolated Product Render.</p>
             </div>
           </div>
-          <div className="col-span-3 h-[450px] bg-indigo-50 rounded-[2.5rem] p-8 flex flex-col justify-center gap-6 shadow-xl">
-             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center">
-                <svg className="w-8 h-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+          <div className="col-span-3 h-[450px] bg-indigo-50 rounded-[2.5rem] overflow-hidden shadow-xl">
+             <HeroImages.Model />
+             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent p-8 flex flex-col justify-end text-white">
+                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <p className="text-lg font-bold text-left leading-tight">Lifestyle <br/> Integration.</p>
              </div>
-             <p className="text-lg font-medium text-indigo-900 text-left">Scale your brand <br/> with AI visuals.</p>
           </div>
-          <div className="col-span-3 h-[380px] bg-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl -translate-y-8">
-             <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400 font-bold italic tracking-tighter">STUDIO_RENDER</div>
+          <div className="col-span-3 h-[380px] bg-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl -translate-y-8 relative">
+             <HeroImages.Vases />
+             <div className="absolute bottom-6 left-6 flex flex-col gap-1">
+                <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Prop Studio</p>
+                <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                </div>
+             </div>
           </div>
-          <div className="col-span-3 h-[420px] bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl translate-y-4 relative">
+          <div className="col-span-3 h-[420px] bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl translate-y-4 relative flex flex-col items-center justify-center">
              <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] text-white font-bold tracking-widest uppercase">4K MASTER</div>
+             <div className="p-8 text-center text-white space-y-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ready for Shop</p>
+                <h3 className="text-2xl font-bold tracking-tight">Stop the scroll with <span className="text-indigo-400">editorial</span> finish.</h3>
+                <button onClick={() => setView('studio')} className="px-6 py-2 bg-indigo-600 rounded-full text-[10px] font-bold uppercase hover:bg-indigo-500 transition-all">Launch Studio</button>
+             </div>
           </div>
         </div>
       </section>
@@ -514,6 +576,23 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* NEW: Background Image Upload */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.uploadBackground}</label>
+                <div className="relative group">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'background')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <div className={`border-2 border-dashed rounded-xl md:rounded-2xl p-3 bg-slate-50 transition-all ${selectedBackground ? 'border-indigo-400 bg-white' : 'border-slate-200'}`}>
+                    {selectedBackground ? <img src={selectedBackground} className="w-full h-12 md:h-16 object-cover rounded-lg" /> : (
+                      <div className="h-12 md:h-16 flex flex-col items-center justify-center gap-1 text-slate-300">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <p className="text-[8px] md:text-[9px] font-bold uppercase">{lang === 'en' ? 'Upload Custom Scene' : 'رفع مشهد مخصص'}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.uploadLogo}</label>
                 <div className="relative group">

@@ -69,211 +69,130 @@ export interface GenerationParams {
   aspectRatio: AspectRatio;
   base64Image?: string;
   logoBase64?: string;
+  backgroundBase64?: string;
 }
 
 export const PHOTO_TEMPLATES: PhotoTemplate[] = [
   // PROFESSIONAL / STUDIO
   {
     id: 'studio_session',
-    label: { en: 'Full Studio', ar: 'استوديو كامل' },
+    label: { en: 'White Studio', ar: 'استوديو أبيض' },
     category: { en: 'Pro Studio', ar: 'استوديو احترافي' },
     description: { 
-      en: 'Complete pro photoshoot look. Multi-light setup with premium props and softboxes.', 
-      ar: 'مظهر جلسة تصوير كاملة. إعداد إضاءة متعددة مع ملحقات فاخرة وصناديق إضاءة ناعمة.' 
+      en: 'Pure minimalist white background. Perfect for e-commerce and clean brand listings.', 
+      ar: 'خلفية بيضاء بسيطة ونقية. مثالية للتجارة الإلكترونية وقوائم العلامات التجارية النظيفة.' 
     },
-    promptBase: 'A full professional high-end studio photoshoot session. The product is the center of a curated editorial set, cinematic lighting, multiple softboxes, luxury aesthetic, sharp commercial photography.'
+    promptBase: 'Professional high-end commercial product photography. The product is placed in a pure, clean, minimalist white studio environment with a subtle seamless horizon. Bright, even high-key lighting using multiple softboxes. No harsh shadows. Sharp focus on the product textures. 8k resolution, editorial e-commerce quality.'
   },
   {
     id: 'product_macro',
-    label: { en: 'Macro Zoom', ar: 'تكبير ماكرو' },
+    label: { en: 'Macro Detail', ar: 'تفاصيل ماكرو' },
     category: { en: 'Pro Studio', ar: 'استوديو احترافي' },
     description: { 
-      en: 'Extreme detail focus. Best for showing craftsmanship, fine textures, and material quality.', 
-      ar: 'تركيز فائق على التفاصيل. الأفضل لإظهار الحرفية والملامس الدقيقة وجودة المواد.' 
+      en: 'Extreme detail focus. Best for showing craftsmanship and fine material textures.', 
+      ar: 'تركيز فائق على التفاصيل. الأفضل لإظهار الحرفية وملامس المواد الدقيقة.' 
     },
-    promptBase: 'Extreme macro close-up photography of the product, shallow depth of field, focusing on intricate textures and material quality, crisp details, professional lighting.'
+    promptBase: 'Extreme macro close-up product photography. Super shallow depth of field with creamy bokeh background. Focus is pin-sharp on the most intricate details and textures of the product. Professional studio macro lighting setup, high-fidelity capture, 8k resolution.'
   },
   
   // APPAREL
   {
     id: 'tshirt_male',
-    label: { en: 'Male Model', ar: 'عارض أزياء' },
+    label: { en: 'Male Editorial', ar: 'عارض أزياء' },
     category: { en: 'Apparel', ar: 'ملابس' },
     description: { 
-      en: 'Urban fashion look. Professional model in a minimalist high-end studio.', 
-      ar: 'مظهر أزياء حضري. عارض محترف في استوديو بسيط وراقي.' 
+      en: 'Professional male model in a high-end minimalist studio setting.', 
+      ar: 'عارض أزياء محترف في استوديو بسيط وراقي.' 
     },
-    promptBase: 'A professional male fashion model wearing the garment, standing in a minimalist high-end studio with soft rim lighting, urban fashion aesthetic.'
+    promptBase: 'High-end fashion editorial. A professional male model is wearing the product. The setting is a minimalist architectural studio with large windows and soft natural directional light. Cinematic composition, sharp focus on fabric drapes and fit, 8k resolution.'
   },
   {
     id: 'tshirt_female',
-    label: { en: 'Female Model', ar: 'عارضة أزياء' },
+    label: { en: 'Female Editorial', ar: 'عارضة أزياء' },
     category: { en: 'Apparel', ar: 'ملابس' },
     description: { 
-      en: 'Elegant catalog style. Clean background with soft professional lighting.', 
-      ar: 'أسلوب كتالوج أنيق. خلفية نظيفة مع إضاءة احترافية ناعمة.' 
+      en: 'Elegant catalog style. Clean background with soft professional studio lighting.', 
+      ar: 'أسلوب كتالوج أنيق. خلفية نظيفة مع إضاءة استوديو احترافية ناعمة.' 
     },
-    promptBase: 'A professional female fashion model wearing the garment, elegant pose, clean studio background, professional catalogue lighting.'
+    promptBase: 'Professional female fashion model wearing the product. Elegant studio pose, neutral grey background, high-key professional catalog lighting. Sharp focus on garment details, luxury fashion photography style, 8k resolution.'
   },
   {
     id: 'apparel_active',
-    label: { en: 'Gym / Active', ar: 'رياضي' },
+    label: { en: 'Performance', ar: 'أداء رياضي' },
     category: { en: 'Apparel', ar: 'ملابس' },
     description: { 
-      en: 'High-energy gym environment. Dynamic lighting with a focus on performance and fit.', 
-      ar: 'بيئة صالة ألعاب رياضية عالية الطاقة. إضاءة ديناميكية مع التركيز على الأداء والقياس.' 
+      en: 'High-energy gym environment. Focus on performance and athletic fit.', 
+      ar: 'بيئة صالة رياضية عالية الطاقة. تركيز على الأداء والقياس الرياضي.' 
     },
-    promptBase: 'Athletic apparel photography in a modern high-end gym, dynamic contrast lighting, focus on fabric performance and fit, professional sports catalog style.'
-  },
-  {
-    id: 'apparel_street',
-    label: { en: 'Street Style', ar: 'نمط الشارع' },
-    category: { en: 'Apparel', ar: 'ملابس' },
-    description: { 
-      en: 'Candid urban look. Set against concrete or graffiti in natural daylight.', 
-      ar: 'مظهر حضري عفوي. موضوع أمام الخرسانة أو الجرافيتي في ضوء النهار الطبيعي.' 
-    },
-    promptBase: 'Street style fashion photography, urban city background, concrete textures, natural golden hour sunlight, lifestyle aesthetic.'
+    promptBase: 'Athletic apparel performance photography. Set in a modern, high-tech luxury gym. Dynamic high-contrast lighting, sharp focus on technical fabric textures and sweat-wicking details. Energetic atmosphere, professional sports brand aesthetic.'
   },
 
   // FOOD & BEVERAGE
   {
     id: 'food_rustic',
-    label: { en: 'Rustic Table', ar: 'طاولة ريفية' },
+    label: { en: 'Rustic Gourmet', ar: 'طعام ريفي' },
     category: { en: 'Food', ar: 'طعام' },
     description: { 
-      en: 'Warm, organic feel. Set on a dark wooden table with scattered ingredients.', 
-      ar: 'شعور دافئ وعضوي. يوضع على طاولة خشبية داكنة مع مكونات متناثرة.' 
+      en: 'Warm, organic feel. Set on aged oak with natural ingredient accents.', 
+      ar: 'شعور دافئ وعضوي. يوضع على خشب البلوط المعتق مع لمسات من المكونات الطبيعية.' 
     },
-    promptBase: 'Gourmet food photography on a dark rustic wooden table, overhead shot, scattered fresh ingredients, warm natural window lighting, organic cozy aesthetic.'
-  },
-  {
-    id: 'food_bakery',
-    label: { en: 'Artisan Bakery', ar: 'مخبز يدوي' },
-    category: { en: 'Food', ar: 'طعام' },
-    description: { 
-      en: 'Soft flour dust and warm oven light. Perfect for breads and pastries.', 
-      ar: 'غبار دقيق ناعم وضوء فرن دافئ. مثالي للخبز والمعجنات.' 
-    },
-    promptBase: 'Professional bakery photography, warm glowing oven light, light dust of flour in the air, rustic kitchen background, artisan bread aesthetic.'
+    promptBase: 'Professional gourmet food photography. Product is styled on an aged rustic oak table. Natural side window lighting creating soft shadows. Garnished with scattered fresh raw ingredients. Organic, warm, appetizing aesthetic, 8k resolution.'
   },
   {
     id: 'food_beverage',
-    label: { en: 'Liquid Splash', ar: 'رذاذ سائل' },
+    label: { en: 'Liquid Action', ar: 'حركة السوائل' },
     category: { en: 'Food', ar: 'طعام' },
     description: { 
-      en: 'Dynamic splash effect. High-speed photography look for drinks and cocktails.', 
-      ar: 'تأثير رذاذ ديناميكي. مظهر تصوير عالي السرعة للمشروبات والكوكتيلات.' 
+      en: 'Dynamic splash effect. Professional high-speed drink photography.', 
+      ar: 'تأثير رذاذ ديناميكي. تصوير مشروبات احترافي عالي السرعة.' 
     },
-    promptBase: 'High-speed beverage photography, dynamic liquid splash, crystal clear ice cubes, vibrant colors, professional bar lighting, refreshing look.'
+    promptBase: 'High-speed beverage action photography. Dynamic, crystal-clear liquid splash caught in mid-air. Studio lighting setup with fast flash duration. Vibrant colors, refreshing atmosphere, commercial drink advertisement style.'
   },
 
   // ELECTRONICS & TECH
   {
     id: 'tech_minimal',
-    label: { en: 'Cyber Minimal', ar: 'سايبر بسيط' },
+    label: { en: 'Tech Noir', ar: 'تقنية داكنة' },
     category: { en: 'Electronics', ar: 'إلكترونيات' },
     description: { 
-      en: 'Futuristic and dark. Blue rim lights on a matte black background.', 
-      ar: 'مستقبلي وداكن. أضواء حافة زرقاء على خلفية سوداء مطفأة.' 
+      en: 'Futuristic and dark. Precision rim lighting on matte surfaces.', 
+      ar: 'مستقبلي وداكن. إضاءة حافة دقيقة على الأسطح المطفأة.' 
     },
-    promptBase: 'Futuristic product photography for electronics, dark matte background, sharp neon blue rim lighting, floating particles, tech-noir aesthetic.'
-  },
-  {
-    id: 'tech_gaming',
-    label: { en: 'Gamer Setup', ar: 'إعداد لاعب' },
-    category: { en: 'Electronics', ar: 'إلكترونيات' },
-    description: { 
-      en: 'Aggressive RGB lighting. Dark environment with neon glows.', 
-      ar: 'إضاءة RGB قوية. بيئة داكنة مع توهجات نيون.' 
-    },
-    promptBase: 'Professional gaming setup background, RGB led lighting, aggressive angles, mechanical aesthetic, dark gaming room vibe.'
-  },
-  {
-    id: 'tech_office',
-    label: { en: 'Clean Desk', ar: 'مكتب نظيف' },
-    category: { en: 'Electronics', ar: 'إلكترونيات' },
-    description: { 
-      en: 'Productivity focused. Bright minimalist wooden desk with natural plant accents.', 
-      ar: 'مركز على الإنتاجية. مكتب خشبي بسيط ومشرق مع لمسات نباتية طبيعية.' 
-    },
-    promptBase: 'Modern minimalist office desk setup, light wood texture, green plants, soft natural morning light, productive and clean workspace aesthetic.'
+    promptBase: 'Futuristic tech product photography. Dark matte carbon fiber background. Sharp neon cyan and magenta rim lighting. Floating holographic UI elements. High-end gadget commercial aesthetic, 8k resolution, cinematic tech-noir vibe.'
   },
 
   // LUXURY & COSMETICS
   {
     id: 'luxury_jewelry',
-    label: { en: 'Velvet Glow', ar: 'توهج مخملي' },
+    label: { en: 'Diamond Sparkle', ar: 'بريق الماس' },
     category: { en: 'Beauty & Luxury', ar: 'جمال وفخامة' },
     description: { 
-      en: 'Plush and premium. Focused on diamond-like sparkles and elegant reflections.', 
-      ar: 'فاخر وممتاز. يركز على لمعان الألماس والانعكاسات الأنيقة.' 
+      en: 'Premium sparkle focus. Elegant reflections on black silk.', 
+      ar: 'تركيز على البريق الفاخر. انعكاسات أنيقة على الحرير الأسود.' 
     },
-    promptBase: 'Luxury jewelry photography on a plush dark velvet surface, focused diamond-like sparkle highlights, soft bokeh background, elegant reflections.'
+    promptBase: 'Luxury high-end jewelry photography. Product is resting on a black liquid silk fabric. Intense point-light sources creating multiple star-burst sparkles. Elegant caustic reflections, deep blacks, sharp focus, 8k resolution.'
   },
   {
     id: 'cosmetic_spa',
-    label: { en: 'Zen Spa', ar: 'سبا هادئ' },
+    label: { en: 'Botanical Zen', ar: 'زن نباتي' },
     category: { en: 'Beauty & Luxury', ar: 'جمال وفخامة' },
     description: { 
-      en: 'Tranquil and natural. Water ripples, stones, and botanical elements.', 
-      ar: 'هادئ وطبيعي. تموجات ماء، أحجار، وعناصر نباتية.' 
+      en: 'Tranquil and natural. Water ripples and soft botanical elements.', 
+      ar: 'هادئ وطبيعي. تموجات ماء ولمسات نباتية ناعمة.' 
     },
-    promptBase: 'Zen-style cosmetic product photography, natural stone pedestal, soft water ripples in the background, eucalyptus leaves, morning sunlight.'
-  },
-  {
-    id: 'cosmetic_marble',
-    label: { en: 'Marble Chic', ar: 'رخام أنيق' },
-    category: { en: 'Beauty & Luxury', ar: 'جمال وفخامة' },
-    description: { 
-      en: 'High-end bathroom aesthetic. White marble with gold accents.', 
-      ar: 'جمالية حمام راقٍ. رخام أبيض مع لمسات ذهبية.' 
-    },
-    promptBase: 'Elegant cosmetic product photography, polished white marble surface, gold accents, soft vanity lighting, luxury skincare brand aesthetic.'
+    promptBase: 'Tranquil cosmetic product photography. Product is placed on a wet stone pedestal. Soft rippling water in the foreground. Diffused morning sunlight through eucalyptus leaves. Clean, organic, peaceful spa aesthetic.'
   },
 
   // HOME & LIVING
   {
     id: 'home_living',
-    label: { en: 'Living Room', ar: 'غرفة المعيشة' },
+    label: { en: 'Modern Scandi', ar: 'مودرن اسكندنافي' },
     category: { en: 'Home', ar: 'المنزل' },
     description: { 
-      en: 'Cozy and inviting. Scandinavian style with soft pillows and natural light.', 
-      ar: 'مريح وجذاب. أسلوب اسكندنافي مع وسائد ناعمة وضوء طبيعي.' 
+      en: 'Bright and cozy. Scandinavian living room with natural light.', 
+      ar: 'مشرق ومريح. غرفة معيشة اسكندنافية مع ضوء طبيعي.' 
     },
-    promptBase: 'Interior lifestyle photography, modern Scandinavian living room, soft fabric textures, warm natural lighting from a nearby window, cozy home vibe.'
-  },
-  {
-    id: 'home_bedroom',
-    label: { en: 'Nightstand', ar: 'طاولة السرير' },
-    category: { en: 'Home', ar: 'المنزل' },
-    description: { 
-      en: 'Intimate and warm. Set on a wooden nightstand with a glowing lamp.', 
-      ar: 'حميم ودافئ. يوضع على طاولة سرير خشبية مع مصباح متوهج.' 
-    },
-    promptBase: 'Cozy bedroom lifestyle shot, wooden nightstand, soft bokeh of a warm bed-side lamp, intimate and peaceful atmosphere.'
-  },
-
-  // FOOTWEAR
-  {
-    id: 'shoes_studio',
-    label: { en: 'Sneaker Hero', ar: 'لقطة حذاء' },
-    category: { en: 'Footwear', ar: 'أحذية' },
-    description: { 
-      en: 'Dynamic floating shot. High contrast studio lighting for sneakers.', 
-      ar: 'لقطة طائرة ديناميكية. إضاءة استوديو عالية التباين للأحذية الرياضية.' 
-    },
-    promptBase: 'Professional sneaker photography, floating in mid-air, dynamic angle, high-contrast studio lighting, sharp focus on materials and sole, clean background.'
-  },
-  {
-    id: 'shoes_street',
-    label: { en: 'Urban Pavement', ar: 'رصيف حضري' },
-    category: { en: 'Footwear', ar: 'أحذية' },
-    description: { 
-      en: 'Lifestyle walking shot. Asphalt textures and urban street vibe.', 
-      ar: 'لقطة مشي عصرية. ملامس أسفلت وجو شارع حضري.' 
-    },
-    promptBase: 'Lifestyle footwear photography, walking on urban asphalt, stylish socks visible, blurred city street background, natural daylight.'
+    promptBase: 'Interior design lifestyle photography. Product is integrated into a bright modern Scandinavian living room. Soft neutral color palette, natural afternoon sunlight from a large window. High-quality furniture, cozy and aspirational atmosphere.'
   }
 ];
 

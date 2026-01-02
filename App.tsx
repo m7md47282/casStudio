@@ -57,6 +57,7 @@ const translations = {
     resetBtn: "Reset All",
     clearHistory: "Clear History",
     errorExpired: "Your API key session expired. Please select it again.",
+    errorNoKey: "An API key is required for High-Quality (2K/4K) generation.",
     placeholder: "Describe colors, materials, or environment...",
     customOnly: "Custom Only",
     customDesc: "No template. Fully rely on your custom description to build the scene from scratch."
@@ -105,6 +106,7 @@ const translations = {
     resetBtn: "إعادة ضبط",
     clearHistory: "مسح السجل",
     errorExpired: "انتهت صلاحية مفتاح API الخاص بك. يرجى اختياره مرة أخرى.",
+    errorNoKey: "مفتاح API مطلوب لتوليد الصور بجودة عالية (2K/4K).",
     placeholder: "صف الألوان أو المواد أو البيئة...",
     customOnly: "مخصص فقط",
     customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص لبناء المشهد من الصفر."
@@ -115,13 +117,12 @@ const BeforeAfterSlider: React.FC<{ lang: Language }> = ({ lang }) => {
   const [sliderPos, setSliderPos] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
-
   const t = translations[lang];
 
-  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleMove = (e: React.MouseEvent | React.TouchEvent | any) => {
     if (!isResizing.current || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
     const position = ((x - rect.left) / rect.width) * 100;
     setSliderPos(Math.min(Math.max(position, 0), 100));
   };
@@ -129,7 +130,7 @@ const BeforeAfterSlider: React.FC<{ lang: Language }> = ({ lang }) => {
   return (
     <div 
       ref={containerRef}
-      className="relative aspect-[16/9] w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-slate-100 cursor-ew-resize select-none"
+      className="relative aspect-video md:aspect-[16/9] w-full rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl bg-slate-100 cursor-ew-resize select-none"
       onMouseDown={() => (isResizing.current = true)}
       onMouseUp={() => (isResizing.current = false)}
       onMouseLeave={() => (isResizing.current = false)}
@@ -139,38 +140,36 @@ const BeforeAfterSlider: React.FC<{ lang: Language }> = ({ lang }) => {
       onTouchMove={handleMove}
     >
       <div className="absolute inset-0 bg-slate-200">
-        <div className="absolute inset-0 flex items-center justify-center font-bold text-slate-400 italic">PRO_MASTER_VIEW</div>
-        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100 to-white flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-32 h-32 bg-white rounded-3xl shadow-2xl flex items-center justify-center mb-4">
-              <svg className="w-16 h-16 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100 to-white flex flex-col items-center justify-center p-6 md:p-12 text-center">
+            <div className="w-16 h-16 md:w-32 md:h-32 bg-white rounded-2xl md:rounded-3xl shadow-2xl flex items-center justify-center mb-2 md:mb-4">
+              <svg className="w-8 h-8 md:w-16 md:h-16 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
               </svg>
             </div>
-            <p className="text-xl font-bold text-slate-900 mb-2">High-Fidelity Render</p>
-            <p className="text-sm text-slate-500 max-w-xs">Sharp textures, ray-traced lighting, and professional props.</p>
+            <p className="text-sm md:text-xl font-bold text-slate-900 mb-1">High-Fidelity Render</p>
+            <p className="text-[10px] md:text-sm text-slate-500 max-w-xs px-4">Sharp textures, ray-traced lighting, and professional props.</p>
         </div>
       </div>
 
       <div 
-        className="absolute inset-0 bg-slate-300 pointer-events-none border-r-2 border-white shadow-xl"
+        className="absolute inset-0 bg-slate-300 pointer-events-none border-r-2 border-white shadow-xl overflow-hidden"
         style={{ width: `${sliderPos}%` }}
       >
-        <div className="absolute inset-0 flex items-center justify-center font-bold text-slate-500 italic">RAW_MOBILE_VIEW</div>
-        <div className="absolute inset-0 bg-slate-400/20 backdrop-blur-[2px] flex flex-col items-center justify-center p-12 text-center" style={{ width: containerRef.current?.offsetWidth }}>
-            <div className="w-32 h-32 bg-slate-200 rounded-3xl flex items-center justify-center mb-4 opacity-50 grayscale">
-              <svg className="w-16 h-16 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="absolute inset-0 bg-slate-400/20 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 md:p-12 text-center" style={{ width: containerRef.current?.offsetWidth }}>
+            <div className="w-16 h-16 md:w-32 md:h-32 bg-slate-200 rounded-2xl md:rounded-3xl flex items-center justify-center mb-2 md:mb-4 opacity-50 grayscale">
+              <svg className="w-8 h-8 md:w-16 md:h-16 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               </svg>
             </div>
-            <p className="text-xl font-bold text-slate-600 mb-2">Smartphone Capture</p>
-            <p className="text-sm text-slate-500 max-w-xs">Dull lighting, distracting background, and low contrast.</p>
+            <p className="text-sm md:text-xl font-bold text-slate-600 mb-1">Smartphone Capture</p>
+            <p className="text-[10px] md:text-sm text-slate-500 max-w-xs px-4">Dull lighting, distracting background, and low contrast.</p>
         </div>
       </div>
 
-      <div className="absolute top-6 left-6 px-3 py-1.5 bg-black/40 backdrop-blur-md rounded-full text-[9px] font-black text-white uppercase tracking-widest z-10 border border-white/20">
+      <div className="absolute top-4 left-4 md:top-6 md:left-6 px-2 py-1 bg-black/40 backdrop-blur-md rounded-full text-[8px] md:text-[9px] font-black text-white uppercase tracking-widest z-10 border border-white/20">
         {t.beforeLabel}
       </div>
-      <div className="absolute top-6 right-6 px-3 py-1.5 bg-indigo-600/80 backdrop-blur-md rounded-full text-[9px] font-black text-white uppercase tracking-widest z-10 border border-white/20">
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 px-2 py-1 bg-indigo-600/80 backdrop-blur-md rounded-full text-[8px] md:text-[9px] font-black text-white uppercase tracking-widest z-10 border border-white/20">
         {t.afterLabel}
       </div>
 
@@ -178,8 +177,8 @@ const BeforeAfterSlider: React.FC<{ lang: Language }> = ({ lang }) => {
         className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize z-20 shadow-[0_0_15px_rgba(0,0,0,0.3)]"
         style={{ left: `${sliderPos}%` }}
       >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-2xl flex items-center justify-center border-4 border-slate-50">
-          <svg className="w-5 h-5 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 md:w-10 md:h-10 bg-white rounded-full shadow-2xl flex items-center justify-center border-2 md:border-4 border-slate-50">
+          <svg className="w-3 h-3 md:w-5 md:h-5 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path d="M11 5l-7 7 7 7M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
@@ -223,12 +222,23 @@ const App: React.FC = () => {
   }, [lang]);
 
   useEffect(() => {
+    // Mandatory key check for high-quality models if we're in studio
+    const checkKeyOnMount = async () => {
+      if (view === 'studio' && window.aistudio) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        if (!hasKey) {
+          await window.aistudio.openSelectKey();
+        }
+      }
+    };
+    checkKeyOnMount();
+  }, [view]);
+
+  useEffect(() => {
     if (view === 'landing' && typeof gsap !== 'undefined') {
       gsap.registerPlugin(ScrollTrigger);
-      
       gsap.from(".hero-text > *", { y: 60, opacity: 0, duration: 1, stagger: 0.2, ease: "power4.out" });
       gsap.from(".hero-cards > div", { y: 100, opacity: 0, duration: 1.2, stagger: 0.15, ease: "power3.out", delay: 0.5 });
-      
       gsap.to(".hero-cards > div:nth-child(odd)", { y: -20, duration: 3, repeat: -1, yoyo: true, ease: "sine.inOut" });
       gsap.to(".hero-cards > div:nth-child(even)", { y: 20, duration: 3, repeat: -1, yoyo: true, ease: "sine.inOut" });
 
@@ -236,12 +246,10 @@ const App: React.FC = () => {
         scrollTrigger: { trigger: ".reveal-section", start: "top 80%" },
         scale: 0.9, opacity: 0, duration: 1, stagger: 0.3, ease: "power2.out"
       });
-
       gsap.from(".value-prop-item", {
         scrollTrigger: { trigger: ".value-prop-section", start: "top 80%" },
         y: 40, opacity: 0, duration: 0.8, stagger: 0.2, ease: "power3.out"
       });
-
       gsap.from(".audience-card", {
         scrollTrigger: { trigger: ".audience-section", start: "top 80%" },
         y: 40, opacity: 0, duration: 0.8, stagger: 0.2, ease: "back.out(1.7)"
@@ -264,6 +272,18 @@ const App: React.FC = () => {
 
   const handleGenerate = async () => {
     if (!selectedImage) { setError(lang === 'en' ? "Upload product." : "ارفع المنتج."); return; }
+    
+    // Check key selection for Gemini 3 Pro mandatory requirement
+    if (resolution === Resolution.R2K || resolution === Resolution.R4K) {
+      if (window.aistudio) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        if (!hasKey) {
+          await window.aistudio.openSelectKey();
+          // Proceed after trigger as per race condition guidelines
+        }
+      }
+    }
+
     setIsGenerating(true);
     setError(null);
     try {
@@ -280,30 +300,35 @@ const App: React.FC = () => {
         timestamp: Date.now(), tokensUsed: isPro ? 3500 : 1800, modelType: isPro ? 'pro' : 'flash'
       }, ...prev]);
     } catch (err: any) {
-      setError(err.message === "API_KEY_EXPIRED" ? t.errorExpired : "Failed.");
+      if (err.message === "API_KEY_EXPIRED" || err.message?.includes("Requested entity was not found")) {
+        setError(t.errorExpired);
+        if (window.aistudio) await window.aistudio.openSelectKey();
+      } else {
+        setError(err.message || "Generation failed.");
+      }
     } finally { setIsGenerating(false); }
   };
 
   const LandingPage = () => (
     <div className={`min-h-screen bg-white selection:bg-indigo-100 ${lang === 'ar' ? 'font-arabic' : ''}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      <nav className="fixed top-0 w-full z-50 px-8 py-6 flex justify-between items-center bg-white/70 backdrop-blur-xl">
+      <nav className="fixed top-0 w-full z-50 px-4 md:px-8 py-4 md:py-6 flex justify-between items-center bg-white/70 backdrop-blur-xl border-b border-slate-100">
         <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setView('studio')}>
           <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold transition-transform group-hover:scale-110">C</div>
-          <span className="font-bold text-lg tracking-tighter">CasStudio</span>
+          <span className="font-bold text-base md:text-lg tracking-tighter">CasStudio</span>
         </div>
-        <div className="flex items-center gap-8">
-          <button onClick={() => setLang(lang === 'en' ? 'ar' : 'en')} className="text-xs font-bold uppercase text-slate-400 hover:text-black transition-colors">{lang === 'en' ? 'Arabic' : 'English'}</button>
-          <button onClick={() => setView('studio')} className="px-6 py-2.5 bg-black text-white rounded-full text-xs font-bold hover:bg-slate-800 transition-all active:scale-95">{t.openStudio}</button>
+        <div className="flex items-center gap-4 md:gap-8">
+          <button onClick={() => setLang(lang === 'en' ? 'ar' : 'en')} className="text-[10px] md:text-xs font-bold uppercase text-slate-400 hover:text-black transition-colors">{lang === 'en' ? 'Arabic' : 'English'}</button>
+          <button onClick={() => setView('studio')} className="px-4 md:px-6 py-2 md:py-2.5 bg-black text-white rounded-full text-[10px] md:text-xs font-bold hover:bg-slate-800 transition-all active:scale-95">{t.openStudio}</button>
         </div>
       </nav>
 
-      <section className="pt-40 pb-20 px-6 max-w-7xl mx-auto text-center overflow-hidden">
-        <div className="hero-text mb-20">
+      <section className="pt-24 md:pt-40 pb-12 md:pb-20 px-6 max-w-7xl mx-auto text-center overflow-hidden">
+        <div className="hero-text mb-12 md:mb-20">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">about<sup>[01]</sup></p>
-          <h1 className="text-6xl md:text-8xl font-medium tracking-tight text-slate-900 mb-8 leading-[1.05]" 
+          <h1 className="text-4xl md:text-8xl font-medium tracking-tight text-slate-900 mb-6 md:mb-8 leading-[1.1] md:leading-[1.05]" 
               dangerouslySetInnerHTML={{ __html: t.landingTitle }}></h1>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto mb-10 leading-relaxed">{t.landingSub}</p>
-          <button onClick={() => setView('studio')} className="group flex items-center gap-3 mx-auto px-6 py-3 bg-white border border-slate-200 rounded-full text-sm font-bold hover:bg-slate-50 transition-all">
+          <p className="text-sm md:text-lg text-slate-500 max-w-xl mx-auto mb-8 md:mb-10 leading-relaxed">{t.landingSub}</p>
+          <button onClick={() => setView('studio')} className="group flex items-center gap-3 mx-auto px-6 py-3 bg-white border border-slate-200 rounded-full text-xs font-bold hover:bg-slate-50 transition-all">
             {t.ctaHero}
             <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white group-hover:translate-x-1 transition-transform">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
@@ -311,13 +336,21 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        <div className="hero-cards relative h-[600px] max-w-6xl mx-auto mt-12 grid grid-cols-12 items-center gap-4">
+        <div className="block md:hidden mb-12">
+          <div className="aspect-[4/5] bg-slate-100 rounded-3xl shadow-xl overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-6 flex flex-col justify-end text-left text-white">
+               <p className="text-[10px] font-medium opacity-70 mb-1">Curation Preview</p>
+               <p className="text-xl font-medium leading-tight">Professional lighting everywhere.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden md:grid hero-cards relative h-[600px] max-w-6xl mx-auto mt-12 grid-cols-12 items-center gap-4">
           <div className="col-span-3 h-[400px] bg-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl relative translate-y-12">
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-6 flex flex-col justify-end text-left text-white">
                <p className="text-xs font-medium opacity-70 mb-2">Editorial Style</p>
                <p className="text-xl font-medium leading-tight">Professional lighting on velvet texture.</p>
             </div>
-            <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400 font-bold italic">STUDIO_RENDER_01</div>
           </div>
           <div className="col-span-3 h-[450px] bg-indigo-50 rounded-[2.5rem] p-8 flex flex-col justify-center gap-6 shadow-xl">
              <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center">
@@ -326,55 +359,50 @@ const App: React.FC = () => {
                 </svg>
              </div>
              <p className="text-lg font-medium text-indigo-900 text-left">Scale your brand <br/> with AI visuals.</p>
-             <div className="flex gap-2">
-               <div className="w-8 h-8 bg-white/50 rounded-full flex items-center justify-center font-bold text-[10px]">OS</div>
-               <div className="w-8 h-8 bg-white/50 rounded-full flex items-center justify-center font-bold text-[10px]">WEB</div>
-             </div>
           </div>
           <div className="col-span-3 h-[380px] bg-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl -translate-y-8">
-             <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400 font-bold italic">STUDIO_RENDER_02</div>
+             <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400 font-bold italic tracking-tighter">STUDIO_RENDER</div>
           </div>
           <div className="col-span-3 h-[420px] bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl translate-y-4 relative">
              <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] text-white font-bold tracking-widest uppercase">4K MASTER</div>
-             <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-500 font-bold italic">STUDIO_RENDER_03</div>
           </div>
         </div>
       </section>
 
-      <section className="reveal-section py-32 px-6 bg-slate-50 border-y border-slate-100 overflow-hidden">
+      <section className="reveal-section py-16 md:py-32 px-6 bg-slate-50 border-y border-slate-100 overflow-hidden">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-20 items-center">
-            <div className="flex-1 reveal-item space-y-8">
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">services<sup>[02]</sup></p>
-               <h2 className="text-5xl font-medium tracking-tight text-slate-900 leading-tight" 
+          <div className="flex flex-col lg:flex-row gap-12 md:gap-20 items-center">
+            <div className="flex-1 reveal-item space-y-6 md:space-y-8">
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">services<sup>[02]</sup></p>
+               <h2 className="text-3xl md:text-5xl font-medium tracking-tight text-slate-900 leading-tight" 
                    dangerouslySetInnerHTML={{ __html: t.beforeAfterTitle }}></h2>
-               <p className="text-lg text-slate-500 leading-relaxed">{t.beforeAfterSub}</p>
+               <p className="text-base md:text-lg text-slate-500 leading-relaxed">{t.beforeAfterSub}</p>
                
-               <div className="grid grid-cols-2 gap-4">
-                 <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
-                    <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">RE-LIGHTING</p>
-                    <p className="text-sm font-bold text-slate-800">Dynamic 3D Shadows</p>
+               <div className="grid grid-cols-2 gap-3 md:gap-4">
+                 <div className="p-4 md:p-6 bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm space-y-1 md:space-y-2">
+                    <p className="text-[8px] md:text-[9px] font-black text-indigo-500 uppercase tracking-widest">RE-LIGHTING</p>
+                    <p className="text-xs md:text-sm font-bold text-slate-800">Dynamic 3D Shadows</p>
                  </div>
-                 <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-2">
-                    <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">TEXTURING</p>
-                    <p className="text-sm font-bold text-slate-800">High-Fidelity Cloth</p>
+                 <div className="p-4 md:p-6 bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm space-y-1 md:space-y-2">
+                    <p className="text-[8px] md:text-[9px] font-black text-indigo-500 uppercase tracking-widest">TEXTURING</p>
+                    <p className="text-xs md:text-sm font-bold text-slate-800">High-Fidelity Cloth</p>
                  </div>
                </div>
 
-               <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col gap-6">
+               <div className="p-6 md:p-8 bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col gap-4 md:gap-6">
                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                       </svg>
                     </div>
                     <div className="flex-1">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Processing Speed</p>
-                      <p className="text-lg font-medium text-slate-900">3.4 seconds / studio render</p>
+                      <p className="text-base md:text-lg font-medium text-slate-900">3.4 seconds / studio render</p>
                     </div>
                  </div>
-                 <button onClick={() => setView('studio')} className="group flex items-center gap-3 px-6 py-3 bg-slate-50 rounded-full text-xs font-bold hover:bg-slate-100 transition-all">
-                    Open Studio
+                 <button onClick={() => setView('studio')} className="group flex items-center gap-3 px-6 py-2.5 bg-slate-50 rounded-full text-[10px] md:text-xs font-bold hover:bg-slate-100 transition-all">
+                    {t.openStudio}
                     <div className="w-6 h-6 bg-slate-900 rounded-full flex items-center justify-center text-white group-hover:translate-x-1 transition-transform">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                     </div>
@@ -389,101 +417,54 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      <section className="value-prop-section py-32 px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-20">
+      <section className="value-prop-section py-16 md:py-32 px-6 max-w-7xl mx-auto">
+        <div className="text-center mb-12 md:mb-20">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">benefits<sup>[03]</sup></p>
-          <h2 className="text-5xl font-medium tracking-tight text-slate-900 mb-6 leading-tight" 
+          <h2 className="text-3xl md:text-5xl font-medium tracking-tight text-slate-900 mb-4 md:mb-6 leading-tight" 
               dangerouslySetInnerHTML={{ __html: t.valuePropTitle }}></h2>
-          <p className="text-lg text-slate-500 max-w-2xl mx-auto">{t.valuePropSub}</p>
+          <p className="text-sm md:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">{t.valuePropSub}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-          <div className="value-prop-item space-y-6">
-            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-2xl text-indigo-600 font-bold">01</div>
-            <h3 className="text-xl font-bold text-slate-900">{t.valueSpeed}</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">{t.valueSpeedDesc}</p>
-          </div>
-          <div className="value-prop-item space-y-6">
-            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-2xl text-indigo-600 font-bold">02</div>
-            <h3 className="text-xl font-bold text-slate-900">{t.valueCost}</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">{t.valueCostDesc}</p>
-          </div>
-          <div className="value-prop-item space-y-6">
-            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-2xl text-indigo-600 font-bold">03</div>
-            <h3 className="text-xl font-bold text-slate-900">{t.valueQuality}</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">{t.valueQualityDesc}</p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+          {[
+            { id: '01', title: t.valueSpeed, desc: t.valueSpeedDesc },
+            { id: '02', title: t.valueCost, desc: t.valueCostDesc },
+            { id: '03', title: t.valueQuality, desc: t.valueQualityDesc }
+          ].map((v, i) => (
+            <div key={i} className="value-prop-item space-y-4 md:space-y-6">
+              <div className="w-12 h-12 md:w-14 md:h-14 bg-indigo-50 rounded-xl md:rounded-2xl flex items-center justify-center text-lg md:text-2xl text-indigo-600 font-bold">{v.id}</div>
+              <h3 className="text-lg md:text-xl font-bold text-slate-900">{v.title}</h3>
+              <p className="text-xs md:text-sm text-slate-500 leading-relaxed">{v.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="audience-section py-32 px-6 max-w-7xl mx-auto text-center border-t border-slate-100">
-        <h2 className="text-4xl font-medium text-slate-900 mb-4">{t.audienceTitle}</h2>
-        <p className="text-slate-500 mb-20">{t.audienceSub}</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-           {[
-             { title: t.value1Title, desc: t.value1Desc, icon: (
-               <svg className="w-12 h-12 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-               </svg>
-             ) },
-             { title: t.value2Title, desc: t.value2Desc, icon: (
-               <svg className="w-12 h-12 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-               </svg>
-             ) },
-             { title: t.value3Title, desc: t.value3Desc, icon: (
-               <svg className="w-12 h-12 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.99 7.99 0 0120 13a7.98 7.98 0 01-2.343 5.657z" />
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.879 16.121A3 3 0 1012.015 11L11 14.015V11" />
-               </svg>
-             ) }
-           ].map((item, i) => (
-             <div key={i} className="audience-card p-10 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all text-left">
-                <div className="mb-6">{item.icon}</div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">{item.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
-             </div>
-           ))}
-        </div>
-      </section>
-
-      <section className="py-32 px-6 bg-slate-900 text-center relative overflow-hidden">
+      <section className="py-16 md:py-32 px-6 bg-slate-900 text-center relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,#312e81,transparent)] opacity-40"></div>
         <div className="relative z-10 max-w-2xl mx-auto">
-          <h2 className="text-5xl font-medium text-white mb-6 leading-tight">{t.contactTitle}</h2>
-          <p className="text-slate-400 text-lg mb-12">{t.contactSub}</p>
-          <button onClick={() => setView('studio')} className="group flex items-center gap-4 mx-auto px-8 py-4 bg-white rounded-full text-sm font-bold hover:scale-105 transition-all">
+          <h2 className="text-3xl md:text-5xl font-medium text-white mb-4 md:mb-6 leading-tight">{t.contactTitle}</h2>
+          <p className="text-sm md:text-lg text-slate-400 mb-8 md:mb-12 leading-relaxed">{t.contactSub}</p>
+          <button onClick={() => setView('studio')} className="group flex items-center gap-4 mx-auto px-6 md:px-8 py-3 md:py-4 bg-white rounded-full text-xs md:text-sm font-bold hover:scale-105 transition-all">
             Start Generating
-            <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white transition-transform group-hover:rotate-45">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white transition-transform group-hover:rotate-45">
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
             </div>
           </button>
         </div>
       </section>
 
-      <footer className="py-20 px-6 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+      <footer className="py-12 md:py-20 px-6 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
            <div className="flex items-center gap-3">
              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white font-bold">C</div>
              <div className="text-left">
-               <p className="font-bold text-lg leading-none mb-1">CasStudio</p>
+               <p className="font-bold text-base md:text-lg leading-none mb-1">CasStudio</p>
                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.subtitle}</p>
              </div>
            </div>
-           <div className="flex gap-12">
-             <div className="flex flex-col gap-3 items-start">
-               <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Platform</p>
-               <a href="#" onClick={() => setView('studio')} className="text-sm font-medium text-slate-500 hover:text-black">Open Studio</a>
-               <a href="#" className="text-sm font-medium text-slate-500 hover:text-black">API Access</a>
-             </div>
-             <div className="flex flex-col gap-3 items-start">
-               <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Connect</p>
-               <a href="#" className="text-sm font-medium text-slate-500 hover:text-black">Instagram</a>
-               <a href="#" className="text-sm font-medium text-slate-500 hover:text-black">Terms of Service</a>
-             </div>
-           </div>
         </div>
-        <p className="text-center mt-20 text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em]">{t.copyright}</p>
+        <p className="text-center mt-12 md:mt-20 text-[8px] md:text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em]">{t.copyright}</p>
       </footer>
     </div>
   );
@@ -492,27 +473,27 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col bg-slate-50 transition-all ${lang === 'ar' ? 'font-arabic' : ''}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white shadow-lg font-bold">C</div>
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-2 md:gap-3 cursor-pointer" onClick={() => setView('landing')}>
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-black rounded-lg md:rounded-xl flex items-center justify-center text-white shadow-lg font-bold">C</div>
           <div className="hidden sm:block">
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">{t.title}</h1>
-            <p className="text-xs text-slate-500 font-medium tracking-tight">{t.subtitle}</p>
+            <h1 className="text-sm md:text-xl font-bold text-slate-900 tracking-tight leading-tight">{t.title}</h1>
+            <p className="text-[10px] md:text-xs text-slate-500 font-medium tracking-tight leading-tight">{t.subtitle}</p>
           </div>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 md:gap-6">
           <div className="hidden lg:flex items-center gap-6 pr-6 border-r border-slate-200 ml-auto">
             <p className="text-sm font-black text-slate-900">{stats.totalTokens.toLocaleString()} <span className="text-[10px] text-slate-400">Tokens</span></p>
           </div>
-          <Button variant="outline" onClick={() => window.aistudio?.openSelectKey()} className="hidden md:flex text-sm">{t.configure}</Button>
-          <button onClick={() => setView('landing')} className="text-xs font-bold uppercase text-slate-400">Home</button>
+          <Button variant="outline" onClick={() => window.aistudio?.openSelectKey()} className="hidden md:flex text-xs py-1.5 px-3">{t.configure}</Button>
+          <button onClick={() => setView('landing')} className="text-[10px] md:text-xs font-bold uppercase text-slate-400">Home</button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col lg:flex-row p-6 gap-8 max-w-screen-2xl mx-auto w-full">
-        <aside className="w-full lg:w-[400px] flex flex-col gap-6 shrink-0 h-fit lg:sticky lg:top-[88px]">
-          <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300 mb-6 flex items-center gap-2">
+      <main className="flex-1 flex flex-col lg:flex-row p-4 md:p-6 gap-6 md:gap-8 max-w-screen-2xl mx-auto w-full">
+        <aside className="w-full lg:w-[380px] xl:w-[400px] flex flex-col gap-4 md:gap-6 shrink-0 h-fit lg:sticky lg:top-[88px]">
+          <section className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100">
+            <h2 className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-slate-300 mb-4 md:mb-6 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">1</span>
               {t.step1}
             </h2>
@@ -521,13 +502,13 @@ const App: React.FC = () => {
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.uploadProduct}</label>
                 <div className="relative group">
                   <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'product')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                  <div className={`border-2 border-dashed rounded-2xl p-4 bg-slate-50 transition-all ${selectedImage ? 'border-black bg-white' : 'border-slate-200 hover:border-slate-400'}`}>
-                    {selectedImage ? <img src={selectedImage} className="w-full h-32 object-contain" /> : (
-                      <div className="h-32 flex flex-col items-center justify-center gap-2 text-slate-300">
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className={`border-2 border-dashed rounded-xl md:rounded-2xl p-4 bg-slate-50 transition-all ${selectedImage ? 'border-black bg-white' : 'border-slate-200 hover:border-slate-400'}`}>
+                    {selectedImage ? <img src={selectedImage} className="w-full h-24 md:h-32 object-contain" /> : (
+                      <div className="h-24 md:h-32 flex flex-col items-center justify-center gap-2 text-slate-300">
+                        <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                         </svg>
-                        <p className="text-[10px] font-bold uppercase">Click to upload</p>
+                        <p className="text-[9px] md:text-[10px] font-bold uppercase">Click to upload</p>
                       </div>
                     )}
                   </div>
@@ -537,10 +518,10 @@ const App: React.FC = () => {
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.uploadLogo}</label>
                 <div className="relative group">
                   <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                  <div className={`border-2 border-dashed rounded-2xl p-4 bg-slate-50 transition-all ${selectedLogo ? 'border-black bg-white' : 'border-slate-200'}`}>
-                    {selectedLogo ? <img src={selectedLogo} className="w-full h-12 object-contain" /> : (
-                      <div className="h-12 flex flex-col items-center justify-center gap-1 text-slate-300">
-                        <p className="text-[10px] font-bold uppercase">Brand Logo</p>
+                  <div className={`border-2 border-dashed rounded-xl md:rounded-2xl p-3 bg-slate-50 transition-all ${selectedLogo ? 'border-black bg-white' : 'border-slate-200'}`}>
+                    {selectedLogo ? <img src={selectedLogo} className="w-full h-10 md:h-12 object-contain" /> : (
+                      <div className="h-10 md:h-12 flex flex-col items-center justify-center gap-1 text-slate-300">
+                        <p className="text-[9px] md:text-[10px] font-bold uppercase">Brand Logo</p>
                       </div>
                     )}
                   </div>
@@ -549,22 +530,21 @@ const App: React.FC = () => {
             </div>
           </section>
 
-          {/* Categorized Templates Section with Tooltips */}
-          <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300 mb-6 flex items-center gap-2">
+          <section className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100">
+            <h2 className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-slate-300 mb-4 md:mb-6 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">2</span>
               {t.step2}
             </h2>
             
-            <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+            <div className="space-y-4 md:space-y-6 max-h-[350px] md:max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
               <div className="relative group/tooltip">
                 <button 
                   onClick={() => setSelectedTemplate('none')}
-                  className={`w-full p-3 text-xs font-bold rounded-xl border transition-all ${selectedTemplate === 'none' ? 'bg-black text-white border-black shadow-md' : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-slate-300'}`}
+                  className={`w-full p-2.5 md:p-3 text-[10px] md:text-xs font-bold rounded-xl border transition-all ${selectedTemplate === 'none' ? 'bg-black text-white border-black shadow-md' : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-slate-300'}`}
                 >
                   {t.customOnly}
                 </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 md:w-56 p-2 md:p-3 bg-slate-900 text-white text-[10px] md:text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
                   {t.customDesc}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
                 </div>
@@ -572,7 +552,7 @@ const App: React.FC = () => {
 
               {Object.entries(categorizedTemplates).map(([category, templates]) => (
                 <div key={category} className="space-y-2">
-                  <h3 className="text-[9px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 px-1">
+                  <h3 className="text-[8px] md:text-[9px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 px-1">
                     <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
                     {category}
                   </h3>
@@ -581,12 +561,12 @@ const App: React.FC = () => {
                       <div key={template.id} className="relative group/tooltip">
                         <button
                           onClick={() => setSelectedTemplate(template.id)}
-                          className={`w-full p-3 text-left text-[10px] font-bold rounded-xl border transition-all h-full ${selectedTemplate === template.id ? 'bg-black text-white border-black shadow-md' : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'}`}
+                          className={`w-full p-2 md:p-3 text-left text-[9px] md:text-[10px] font-bold rounded-xl border transition-all h-full min-h-[40px] md:min-h-0 ${selectedTemplate === template.id ? 'bg-black text-white border-black shadow-md' : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'}`}
                         >
                           {template.label[lang] || template.label.en}
                         </button>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
-                          <p className="font-bold text-indigo-400 mb-1 uppercase text-[9px] tracking-widest">{template.label[lang] || template.label.en}</p>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 md:w-56 p-2 md:p-3 bg-slate-900 text-white text-[10px] md:text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
+                          <p className="font-bold text-indigo-400 mb-1 uppercase text-[8px] md:text-[9px] tracking-widest">{template.label[lang] || template.label.en}</p>
                           {template.description[lang] || template.description.en}
                           <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
                         </div>
@@ -598,66 +578,67 @@ const App: React.FC = () => {
             </div>
           </section>
 
-          <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+          <section className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 space-y-4">
+             <h2 className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">3</span>
               {t.step3}
             </h2>
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={t.placeholder} className="w-full h-24 p-4 text-sm rounded-2xl border border-slate-100 focus:ring-2 focus:ring-black outline-none bg-slate-50" />
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={t.placeholder} className="w-full h-20 md:h-24 p-3 md:p-4 text-xs md:text-sm rounded-xl md:rounded-2xl border border-slate-100 focus:ring-2 focus:ring-black outline-none bg-slate-50 transition-all" />
             <div className="grid grid-cols-2 gap-2">
-               <select value={resolution} onChange={(e) => setResolution(e.target.value as Resolution)} className="p-3 text-xs font-bold rounded-xl border border-slate-100 bg-white">
+               <select value={resolution} onChange={(e) => setResolution(e.target.value as Resolution)} className="p-2 md:p-3 text-[10px] md:text-xs font-bold rounded-xl border border-slate-100 bg-white outline-none">
                  <option value={Resolution.R1K}>1K Studio</option>
                  <option value={Resolution.R2K}>2K Premium</option>
                  <option value={Resolution.R4K}>4K Ultra</option>
                </select>
-               <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio)} className="p-3 text-xs font-bold rounded-xl border border-slate-100 bg-white">
+               <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio)} className="p-2 md:p-3 text-[10px] md:text-xs font-bold rounded-xl border border-slate-100 bg-white outline-none">
                  {Object.values(AspectRatio).map(r => <option key={r} value={r}>{r}</option>)}
                </select>
             </div>
-            {error && <div className="p-3 bg-red-50 text-red-500 text-[10px] font-bold rounded-xl">{error}</div>}
-            <Button onClick={handleGenerate} className="w-full py-4 text-sm font-bold bg-black text-white hover:bg-slate-800 rounded-2xl" isLoading={isGenerating}>
+            {error && <div className="p-2 md:p-3 bg-red-50 text-red-500 text-[9px] md:text-[10px] font-bold rounded-lg md:rounded-xl">{error}</div>}
+            <Button onClick={handleGenerate} className="w-full py-3 md:py-4 text-xs md:text-sm font-bold bg-black text-white hover:bg-slate-800 rounded-xl md:rounded-2xl transition-all" isLoading={isGenerating}>
               {isGenerating ? "PROCESSING..." : t.render}
             </Button>
           </section>
         </aside>
 
         <section className="flex-1 min-w-0">
-          <div className="mb-10 flex items-end justify-between">
-            <h2 className="text-4xl font-medium tracking-tight text-slate-900">{t.workspace}</h2>
-            <span className="px-4 py-2 bg-white border border-slate-100 rounded-full text-xs font-bold text-slate-500">{results.length} SAVED</span>
+          <div className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl md:text-4xl font-medium tracking-tight text-slate-900 leading-none">{t.workspace}</h2>
+              <p className="text-[10px] md:text-sm text-slate-400 font-medium mt-1 md:mt-2">{t.resultsDesc}</p>
+            </div>
+            <span className="self-start md:self-auto px-3 py-1 bg-white border border-slate-100 rounded-full text-[10px] md:text-xs font-bold text-slate-500">{results.length} SAVED</span>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {isGenerating && (
-              <div className="aspect-square bg-white rounded-[2.5rem] border border-slate-100 flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="aspect-square bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 flex flex-col items-center justify-center relative overflow-hidden shadow-sm">
                 <div className="absolute inset-0 bg-slate-50 animate-pulse" />
-                <div className="relative z-10 flex flex-col items-center gap-4">
-                  <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rendering masterpiece</p>
+                <div className="relative z-10 flex flex-col items-center gap-3 md:gap-4">
+                  <div className="w-8 h-8 md:w-10 md:h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 text-center">Rendering masterpiece</p>
                 </div>
               </div>
             )}
             {results.map((img) => (
-              <div key={img.id} className="group bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-2xl">
+              <div key={img.id} className="group bg-white rounded-2xl md:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-xl">
                 <div className="relative aspect-square bg-slate-50">
-                  <img src={img.url} className="w-full h-full object-contain" />
-                  <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all">
+                  <img src={img.url} className="w-full h-full object-contain" alt={img.prompt} />
+                  <div className="absolute top-4 right-4 md:top-6 md:right-6 opacity-0 group-hover:opacity-100 transition-all">
                     <button onClick={() => { const link = document.createElement('a'); link.href = img.url; link.download = `cas-${img.id}.png`; link.click(); }} 
-                            className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0 0l-4-4m4 4l4-4"/></svg>
+                            className="w-10 h-10 md:w-12 md:h-12 bg-black text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-transform">
+                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0 0l-4-4m4 4l4-4"/></svg>
                     </button>
                   </div>
                 </div>
-                <div className="p-8">
-                  <div className="flex justify-between items-start gap-4 mb-4">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{img.templateLabel}</p>
-                      <h3 className="text-lg font-bold text-slate-900">"{img.prompt || 'Clean Session'}"</h3>
-                    </div>
+                <div className="p-5 md:p-8">
+                  <div className="flex flex-col gap-2 mb-3 md:mb-4">
+                    <p className="text-[8px] md:text-[10px] font-bold text-indigo-500 uppercase tracking-widest leading-none">{img.templateLabel}</p>
+                    <h3 className="text-sm md:text-lg font-bold text-slate-900 leading-snug line-clamp-2">"{img.prompt || 'Clean Session'}"</h3>
                   </div>
-                  <div className="flex gap-2">
-                     <span className="px-3 py-1 bg-slate-50 text-slate-400 text-[9px] font-black rounded-full uppercase">{img.resolution} • {img.aspectRatio}</span>
-                     {img.hasLogo && <span className="px-3 py-1 bg-black text-white text-[9px] font-black rounded-full uppercase">Branded</span>}
+                  <div className="flex flex-wrap gap-2">
+                     <span className="px-2 md:px-3 py-1 bg-slate-50 text-slate-400 text-[8px] md:text-[9px] font-black rounded-full uppercase">{img.resolution} • {img.aspectRatio}</span>
+                     {img.hasLogo && <span className="px-2 md:px-3 py-1 bg-black text-white text-[8px] md:text-[9px] font-black rounded-full uppercase">Branded</span>}
                   </div>
                 </div>
               </div>

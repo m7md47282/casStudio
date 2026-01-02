@@ -23,7 +23,7 @@ const translations = {
     upload: "Upload Product",
     change: "CHANGE PHOTO",
     customOnly: "Custom Only",
-    customDesc: "No template. Fully rely on your custom description.",
+    customDesc: "No template. Fully rely on your custom description to build the scene from scratch.",
     context: "Custom Context (Optional)",
     placeholder: "Describe colors, materials, or environment...",
     quality: "Quality",
@@ -53,7 +53,7 @@ const translations = {
     upload: "رفع المنتج",
     change: "تغيير الصورة",
     customOnly: "تخصيص فقط",
-    customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص.",
+    customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص لبناء المشهد من الصفر.",
     context: "سياق مخصص (اختياري)",
     placeholder: "صف الألوان أو المواد أو البيئة...",
     quality: "الجودة",
@@ -149,6 +149,16 @@ export default function CasStudioPage() {
     }, 0);
     return { totalTokens, totalCost };
   }, [results]);
+
+  const categorizedTemplates = useMemo(() => {
+    const groups: Record<string, typeof PHOTO_TEMPLATES> = {};
+    PHOTO_TEMPLATES.forEach(template => {
+      const cat = template.category[lang];
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(template);
+    });
+    return groups;
+  }, [lang]);
 
   useEffect(() => {
     const checkKey = async () => {
@@ -277,10 +287,10 @@ export default function CasStudioPage() {
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row p-6 gap-8 max-w-screen-2xl mx-auto w-full">
-        <aside className="w-full lg:w-[400px] flex flex-col gap-6 shrink-0">
+        <aside className="w-full lg:w-[420px] flex flex-col gap-6 shrink-0 h-fit lg:sticky lg:top-[88px]">
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600">1</span>
+              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">1</span>
               {t.step1}
             </h2>
             <div className="relative group">
@@ -303,35 +313,46 @@ export default function CasStudioPage() {
 
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600">2</span>
+              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">2</span>
               {t.step2}
             </h2>
-            <div className="grid grid-cols-2 gap-2">
+            
+            <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
               <div className="relative group/tooltip">
                 <button 
                   onClick={() => setSelectedTemplate('none')}
-                  className={`w-full p-3 text-xs font-bold rounded-xl border transition-all h-full ${selectedTemplate === 'none' ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'}`}
+                  className={`w-full p-3 text-xs font-bold rounded-xl border transition-all ${selectedTemplate === 'none' ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-200'}`}
                 >
                   {t.customOnly}
                 </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-xl pointer-events-none">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
                   {t.customDesc}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800"></div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
                 </div>
               </div>
 
-              {PHOTO_TEMPLATES.map(template => (
-                <div key={template.id} className="relative group/tooltip">
-                  <button
-                    onClick={() => setSelectedTemplate(template.id)}
-                    className={`w-full p-3 text-left rtl:text-right text-[11px] leading-tight rounded-xl border transition-all flex flex-col gap-1 h-full ${selectedTemplate === template.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'}`}
-                  >
-                    <span className={`uppercase text-[9px] tracking-tighter ${selectedTemplate === template.id ? 'text-indigo-200' : 'text-slate-400'}`}>{template.category[lang]}</span>
-                    <span className="font-bold">{template.label[lang]}</span>
-                  </button>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-xl pointer-events-none">
-                    {template.description[lang]}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800"></div>
+              {Object.entries(categorizedTemplates).map(([category, templates]) => (
+                <div key={category} className="space-y-2">
+                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2 bg-slate-50/50 p-1 rounded">
+                    <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
+                    {category}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {templates.map(template => (
+                      <div key={template.id} className="relative group/tooltip">
+                        <button
+                          onClick={() => setSelectedTemplate(template.id)}
+                          className={`w-full p-3 text-left rtl:text-right text-[11px] leading-tight rounded-xl border transition-all flex flex-col gap-1 h-full ${selectedTemplate === template.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'}`}
+                        >
+                          <span className="font-bold">{template.label[lang]}</span>
+                        </button>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
+                          <p className="font-bold text-indigo-400 mb-1 uppercase text-[9px] tracking-widest">{template.label[lang]}</p>
+                          {template.description[lang]}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -340,7 +361,7 @@ export default function CasStudioPage() {
 
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600">3</span>
+              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">3</span>
               {t.step3}
             </h2>
             <div className="space-y-4">

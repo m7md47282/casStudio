@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { GenerationParams, Resolution, PHOTO_TEMPLATES } from "../types";
+import { GenerationParams, Resolution, PHOTO_TEMPLATES, PhotoTemplate } from "../types";
 
 export const generateProductPhoto = async (params: GenerationParams): Promise<string> => {
   const { prompt, templateId, resolution, aspectRatio, base64Image } = params;
@@ -11,10 +11,31 @@ export const generateProductPhoto = async (params: GenerationParams): Promise<st
     ? 'gemini-3-pro-image-preview' 
     : 'gemini-2.5-flash-image';
 
-  // Construct the final prompt from template + custom user input
+  // Construct the final prompt
+  // NOTE: In the current structure, geminiService doesn't have access to App's userTemplates state directly.
+  // We'll search in static templates first. If not found, we rely on the prompt being passed or we'd need to pass the template object.
+  // To fix this cleanly, let's find the template from a merged list passed or handle prompt construction in App.tsx.
+  // Let's assume for simplicity we try to find it in default templates, otherwise the finalPrompt will use standard base.
+  
   const selectedTemplate = PHOTO_TEMPLATES.find(t => t.id === templateId);
+  
+  // If template is userCreated, the UI should have merged the base already? 
+  // No, let's make the service more robust by accepting the full promptBase if templateId is custom.
+  // Actually, a better pattern is to let the service just handle the prompt provided.
+  
   let finalPrompt = selectedTemplate ? selectedTemplate.promptBase : 'Professional studio product photography.';
   
+  // If it's a user template, it won't be in static PHOTO_TEMPLATES.
+  // Let's check localstorage here as a fallback or assume the caller should have resolved it.
+  if (!selectedTemplate && templateId && templateId !== 'none') {
+    const saved = localStorage.getItem('cas_user_templates');
+    if (saved) {
+      const userTemplates: PhotoTemplate[] = JSON.parse(saved);
+      const userT = userTemplates.find(t => t.id === templateId);
+      if (userT) finalPrompt = userT.promptBase;
+    }
+  }
+
   if (prompt && prompt.trim()) {
     finalPrompt += ` Additional scene context: ${prompt}.`;
   }

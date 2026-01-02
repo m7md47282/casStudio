@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from './components/Button';
-import { Resolution, AspectRatio, GeneratedImage, TemplateId, PHOTO_TEMPLATES, Language } from './types';
+import { Resolution, AspectRatio, GeneratedImage, TemplateId, PHOTO_TEMPLATES, PhotoTemplate, Language } from './types';
 import { generateProductPhoto } from './services/geminiService';
 
 // Price per 1M tokens (estimated for simulation)
@@ -21,7 +21,8 @@ const translations = {
     upload: "Upload Product",
     change: "CHANGE PHOTO",
     customOnly: "Custom Only",
-    customDesc: "No template. Fully rely on your custom description.",
+    customDesc: "No template. Fully rely on your custom description to build the scene from scratch.",
+    addTemplate: "Create New Style",
     context: "Custom Context (Optional)",
     placeholder: "Describe colors, materials, or environment...",
     quality: "Quality",
@@ -39,7 +40,15 @@ const translations = {
     tokens: "Tokens",
     errorSelect: "Please select a template or describe your scene.",
     errorExpired: "Your API key session expired. Please select it again.",
-    errorGeneric: "Generation failed. Try a different image."
+    errorGeneric: "Generation failed. Try a different image.",
+    modalTitle: "New Custom Style",
+    labelPlaceholder: "Style Name (e.g. Sunny Garden)",
+    categoryPlaceholder: "Category (e.g. Outdoor)",
+    promptPlaceholder: "Background prompt (e.g. set in a lush sunny garden...)",
+    saveBtn: "Save Style",
+    cancelBtn: "Cancel",
+    delete: "Delete",
+    userStyles: "My Custom Styles"
   },
   ar: {
     title: "كاس استوديو",
@@ -51,7 +60,8 @@ const translations = {
     upload: "رفع المنتج",
     change: "تغيير الصورة",
     customOnly: "تخصيص فقط",
-    customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص.",
+    customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص لبناء المشهد من الصفر.",
+    addTemplate: "إضافة نمط جديد",
     context: "سياق مخصص (اختياري)",
     placeholder: "صف الألوان أو المواد أو البيئة...",
     quality: "الجودة",
@@ -69,7 +79,15 @@ const translations = {
     tokens: "رمز",
     errorSelect: "يرجى اختيار قالب أو وصف المشهد الخاص بك.",
     errorExpired: "انتهت صلاحية مفتاح API الخاص بك. يرجى اختياره مرة أخرى.",
-    errorGeneric: "فشلت عملية التوليد. حاول باستخدام صورة أخرى."
+    errorGeneric: "فشلت عملية التوليد. حاول باستخدام صورة أخرى.",
+    modalTitle: "نمط مخصص جديد",
+    labelPlaceholder: "اسم النمط (مثلاً: حديقة مشمسة)",
+    categoryPlaceholder: "الفئة (مثلاً: خارجي)",
+    promptPlaceholder: "وصف الخلفية (مثلاً: موضوع في حديقة مشمسة...)",
+    saveBtn: "حفظ النمط",
+    cancelBtn: "إلغاء",
+    delete: "حذف",
+    userStyles: "أنماطي المخصصة"
   }
 };
 
@@ -104,14 +122,12 @@ const ImageMagnifier: React.FC<{ src: string; alt: string }> = ({ src, alt }) =>
       {showMagnifier && (
         <div
           style={{
-            display: showMagnifier ? "" : "none",
             position: "absolute",
             pointerEvents: "none",
             height: `${magnifierHeight}px`,
             width: `${magnifierWidth}px`,
             top: `${y - magnifierHeight / 2}px`,
             left: `${x - magnifierWidth / 2}px`,
-            opacity: "1",
             border: "2px solid #6366f1",
             backgroundColor: "white",
             backgroundImage: `url('${src}')`,
@@ -138,8 +154,26 @@ const App: React.FC = () => {
   const [resolution, setResolution] = useState<Resolution>(Resolution.R1K);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.A1_1);
   const [error, setError] = useState<string | null>(null);
+  const [userTemplates, setUserTemplates] = useState<PhotoTemplate[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({ label: '', category: '', prompt: '' });
 
   const t = translations[lang];
+
+  useEffect(() => {
+    const saved = localStorage.getItem('cas_user_templates');
+    if (saved) {
+      setUserTemplates(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('cas_user_templates', JSON.stringify(userTemplates));
+  }, [userTemplates]);
+
+  const allTemplates = useMemo(() => {
+    return [...PHOTO_TEMPLATES, ...userTemplates];
+  }, [userTemplates]);
 
   const stats = useMemo(() => {
     const totalTokens = results.reduce((acc, curr) => acc + curr.tokensUsed, 0);
@@ -149,6 +183,16 @@ const App: React.FC = () => {
     }, 0);
     return { totalTokens, totalCost };
   }, [results]);
+
+  const categorizedTemplates = useMemo(() => {
+    const groups: Record<string, PhotoTemplate[]> = {};
+    allTemplates.forEach(template => {
+      const cat = template.category[lang] || template.category.en;
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(template);
+    });
+    return groups;
+  }, [lang, allTemplates]);
 
   useEffect(() => {
     const checkKey = async () => {
@@ -193,6 +237,9 @@ const App: React.FC = () => {
     setError(null);
 
     try {
+      // Find template in either default or user list
+      const selectedT = allTemplates.find(t => t.id === selectedTemplate);
+
       const imageUrl = await generateProductPhoto({
         prompt,
         templateId: selectedTemplate !== 'none' ? selectedTemplate : undefined,
@@ -201,7 +248,6 @@ const App: React.FC = () => {
         base64Image: selectedImage || undefined,
       });
 
-      const selectedT = PHOTO_TEMPLATES.find(t => t.id === selectedTemplate);
       const templateLabel = selectedT ? selectedT.label[lang] : (lang === 'en' ? 'Custom' : 'مخصص');
       const displayPrompt = prompt.trim() ? `${templateLabel}: ${prompt}` : templateLabel;
 
@@ -212,7 +258,7 @@ const App: React.FC = () => {
         url: imageUrl,
         prompt: displayPrompt,
         timestamp: Date.now(),
-        tokensUsed: 1200, 
+        tokensUsed: isPro ? 2500 : 1200, 
         modelType: isPro ? 'pro' : 'flash'
       };
 
@@ -228,6 +274,31 @@ const App: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSaveTemplate = () => {
+    if (!newTemplate.label || !newTemplate.prompt) return;
+    
+    const id = `user_${Date.now()}`;
+    const template: PhotoTemplate = {
+      id,
+      label: { en: newTemplate.label, ar: newTemplate.label },
+      category: { en: newTemplate.category || t.userStyles, ar: newTemplate.category || t.userStyles },
+      description: { en: `User created style: ${newTemplate.label}`, ar: `نمط مخصص: ${newTemplate.label}` },
+      promptBase: newTemplate.prompt,
+      isUserCreated: true
+    };
+
+    setUserTemplates(prev => [...prev, template]);
+    setNewTemplate({ label: '', category: '', prompt: '' });
+    setShowModal(false);
+    setSelectedTemplate(id);
+  };
+
+  const handleDeleteTemplate = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUserTemplates(prev => prev.filter(t => t.id !== id));
+    if (selectedTemplate === id) setSelectedTemplate('none');
   };
 
   const downloadImage = (url: string, filename: string) => {
@@ -279,10 +350,10 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row p-6 gap-8 max-w-screen-2xl mx-auto w-full">
-        <aside className="w-full lg:w-[400px] flex flex-col gap-6 shrink-0">
+        <aside className="w-full lg:w-[420px] flex flex-col gap-6 shrink-0 h-fit lg:sticky lg:top-[88px]">
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600">1</span>
+              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">1</span>
               {t.step1}
             </h2>
             <div className="relative group">
@@ -304,36 +375,62 @@ const App: React.FC = () => {
           </section>
 
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600">2</span>
-              {t.step2}
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center justify-center gap-2 relative">
+              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">2</span>
+              <span className="flex-1">{t.step2}</span>
+              <Button 
+                variant="ghost" 
+                className="text-[10px] p-1 h-7 bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100"
+                onClick={() => setShowModal(true)}
+              >
+                + {lang === 'en' ? 'Style' : 'نمط'}
+              </Button>
             </h2>
-            <div className="grid grid-cols-2 gap-2">
+            
+            <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
               <div className="relative group/tooltip">
                 <button 
                   onClick={() => setSelectedTemplate('none')}
-                  className={`w-full p-3 text-xs font-bold rounded-xl border transition-all h-full ${selectedTemplate === 'none' ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'}`}
+                  className={`w-full p-3 text-xs font-bold rounded-xl border transition-all ${selectedTemplate === 'none' ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-200'}`}
                 >
                   {t.customOnly}
                 </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-xl pointer-events-none">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
                   {t.customDesc}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800"></div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
                 </div>
               </div>
-              
-              {PHOTO_TEMPLATES.map(template => (
-                <div key={template.id} className="relative group/tooltip">
-                  <button
-                    onClick={() => setSelectedTemplate(template.id)}
-                    className={`w-full p-3 text-left rtl:text-right text-[11px] leading-tight rounded-xl border transition-all flex flex-col gap-1 h-full ${selectedTemplate === template.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'}`}
-                  >
-                    <span className={`uppercase text-[9px] tracking-tighter ${selectedTemplate === template.id ? 'text-indigo-200' : 'text-slate-400'}`}>{template.category[lang]}</span>
-                    <span className="font-bold">{template.label[lang]}</span>
-                  </button>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-xl pointer-events-none">
-                    {template.description[lang]}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800"></div>
+
+              {Object.entries(categorizedTemplates).map(([category, templates]) => (
+                <div key={category} className="space-y-2">
+                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2 bg-slate-50/50 p-1 rounded">
+                    <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
+                    {category}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {templates.map(template => (
+                      <div key={template.id} className="relative group/tooltip">
+                        <button
+                          onClick={() => setSelectedTemplate(template.id)}
+                          className={`w-full p-3 text-left rtl:text-right text-[11px] leading-tight rounded-xl border transition-all flex flex-col gap-1 h-full relative ${selectedTemplate === template.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'}`}
+                        >
+                          <span className="font-bold pr-5 rtl:pr-0 rtl:pl-5">{template.label[lang] || template.label.en}</span>
+                          {template.isUserCreated && (
+                            <div 
+                              onClick={(e) => handleDeleteTemplate(template.id, e)}
+                              className="absolute top-1 right-1 rtl:right-auto rtl:left-1 p-1 hover:bg-red-100 rounded-md text-red-400 hover:text-red-600 transition-colors"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </div>
+                          )}
+                        </button>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
+                          <p className="font-bold text-indigo-400 mb-1 uppercase text-[9px] tracking-widest">{(template.label[lang] || template.label.en)}</p>
+                          {(template.description[lang] || template.description.en)}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -342,7 +439,7 @@ const App: React.FC = () => {
 
           <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600">3</span>
+              <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">3</span>
               {t.step3}
             </h2>
             <div className="space-y-4">
@@ -433,9 +530,49 @@ const App: React.FC = () => {
           )}
         </section>
       </main>
+
+      {/* Template Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-8 space-y-6">
+              <h3 className="text-xl font-black text-slate-900 leading-none">{t.modalTitle}</h3>
+              <div className="space-y-4">
+                <input 
+                  type="text" 
+                  placeholder={t.labelPlaceholder}
+                  className="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={newTemplate.label}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, label: e.target.value }))}
+                />
+                <input 
+                  type="text" 
+                  placeholder={t.categoryPlaceholder}
+                  className="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={newTemplate.category}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
+                />
+                <textarea 
+                  placeholder={t.promptPlaceholder}
+                  className="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none h-32 resize-none"
+                  value={newTemplate.prompt}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, prompt: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button variant="ghost" className="flex-1" onClick={() => setShowModal(false)}>{t.cancelBtn}</Button>
+                <Button variant="primary" className="flex-2" onClick={handleSaveTemplate} disabled={!newTemplate.label || !newTemplate.prompt}>{t.saveBtn}</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700;900&display=swap');
         .font-arabic { font-family: 'Noto Sans Arabic', sans-serif; }
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
       `}} />
     </div>
   );

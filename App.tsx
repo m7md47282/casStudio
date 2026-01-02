@@ -57,7 +57,9 @@ const translations = {
     resetBtn: "Reset All",
     clearHistory: "Clear History",
     errorExpired: "Your API key session expired. Please select it again.",
-    placeholder: "Describe colors, materials, or environment..."
+    placeholder: "Describe colors, materials, or environment...",
+    customOnly: "Custom Only",
+    customDesc: "No template. Fully rely on your custom description to build the scene from scratch."
   },
   ar: {
     title: "كاس استوديو",
@@ -103,7 +105,9 @@ const translations = {
     resetBtn: "إعادة ضبط",
     clearHistory: "مسح السجل",
     errorExpired: "انتهت صلاحية مفتاح API الخاص بك. يرجى اختياره مرة أخرى.",
-    placeholder: "صف الألوان أو المواد أو البيئة..."
+    placeholder: "صف الألوان أو المواد أو البيئة...",
+    customOnly: "مخصص فقط",
+    customDesc: "بدون قالب. الاعتماد كلياً على وصفك المخصص لبناء المشهد من الصفر."
   }
 };
 
@@ -134,32 +138,35 @@ const BeforeAfterSlider: React.FC<{ lang: Language }> = ({ lang }) => {
       onTouchEnd={() => (isResizing.current = false)}
       onTouchMove={handleMove}
     >
-      {/* After Image (Mastered) */}
       <div className="absolute inset-0 bg-slate-200">
         <div className="absolute inset-0 flex items-center justify-center font-bold text-slate-400 italic">PRO_MASTER_VIEW</div>
-        {/* Placeholder gradient for "Mastered" feel */}
         <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100 to-white flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-32 h-32 bg-white rounded-3xl shadow-2xl flex items-center justify-center text-4xl mb-4">💎</div>
+            <div className="w-32 h-32 bg-white rounded-3xl shadow-2xl flex items-center justify-center mb-4">
+              <svg className="w-16 h-16 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+            </div>
             <p className="text-xl font-bold text-slate-900 mb-2">High-Fidelity Render</p>
             <p className="text-sm text-slate-500 max-w-xs">Sharp textures, ray-traced lighting, and professional props.</p>
         </div>
       </div>
 
-      {/* Before Image (Raw) */}
       <div 
         className="absolute inset-0 bg-slate-300 pointer-events-none border-r-2 border-white shadow-xl"
         style={{ width: `${sliderPos}%` }}
       >
         <div className="absolute inset-0 flex items-center justify-center font-bold text-slate-500 italic">RAW_MOBILE_VIEW</div>
-        {/* Placeholder for "Raw" feel */}
         <div className="absolute inset-0 bg-slate-400/20 backdrop-blur-[2px] flex flex-col items-center justify-center p-12 text-center" style={{ width: containerRef.current?.offsetWidth }}>
-            <div className="w-32 h-32 bg-slate-200 rounded-3xl flex items-center justify-center text-4xl mb-4 opacity-50 grayscale">📷</div>
+            <div className="w-32 h-32 bg-slate-200 rounded-3xl flex items-center justify-center mb-4 opacity-50 grayscale">
+              <svg className="w-16 h-16 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              </svg>
+            </div>
             <p className="text-xl font-bold text-slate-600 mb-2">Smartphone Capture</p>
             <p className="text-sm text-slate-500 max-w-xs">Dull lighting, distracting background, and low contrast.</p>
         </div>
       </div>
 
-      {/* Labels */}
       <div className="absolute top-6 left-6 px-3 py-1.5 bg-black/40 backdrop-blur-md rounded-full text-[9px] font-black text-white uppercase tracking-widest z-10 border border-white/20">
         {t.beforeLabel}
       </div>
@@ -167,7 +174,6 @@ const BeforeAfterSlider: React.FC<{ lang: Language }> = ({ lang }) => {
         {t.afterLabel}
       </div>
 
-      {/* Handle */}
       <div 
         className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize z-20 shadow-[0_0_15px_rgba(0,0,0,0.3)]"
         style={{ left: `${sliderPos}%` }}
@@ -205,6 +211,16 @@ const App: React.FC = () => {
     }, 0);
     return { totalTokens, totalCost };
   }, [results]);
+
+  const categorizedTemplates = useMemo(() => {
+    const groups: Record<string, typeof PHOTO_TEMPLATES> = {};
+    PHOTO_TEMPLATES.forEach(template => {
+      const cat = template.category[lang];
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(template);
+    });
+    return groups;
+  }, [lang]);
 
   useEffect(() => {
     if (view === 'landing' && typeof gsap !== 'undefined') {
@@ -304,11 +320,15 @@ const App: React.FC = () => {
             <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400 font-bold italic">STUDIO_RENDER_01</div>
           </div>
           <div className="col-span-3 h-[450px] bg-indigo-50 rounded-[2.5rem] p-8 flex flex-col justify-center gap-6 shadow-xl">
-             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-2xl">📸</div>
+             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center">
+                <svg className="w-8 h-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+             </div>
              <p className="text-lg font-medium text-indigo-900 text-left">Scale your brand <br/> with AI visuals.</p>
              <div className="flex gap-2">
-               <div className="w-8 h-8 bg-white/50 rounded-full flex items-center justify-center"></div>
-               <div className="w-8 h-8 bg-white/50 rounded-full flex items-center justify-center">▶</div>
+               <div className="w-8 h-8 bg-white/50 rounded-full flex items-center justify-center font-bold text-[10px]">OS</div>
+               <div className="w-8 h-8 bg-white/50 rounded-full flex items-center justify-center font-bold text-[10px]">WEB</div>
              </div>
           </div>
           <div className="col-span-3 h-[380px] bg-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl -translate-y-8">
@@ -321,7 +341,6 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* BEFORE & AFTER SECTION */}
       <section className="reveal-section py-32 px-6 bg-slate-50 border-y border-slate-100 overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row gap-20 items-center">
@@ -344,7 +363,11 @@ const App: React.FC = () => {
 
                <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col gap-6">
                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-xl">✨</div>
+                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                      </svg>
+                    </div>
                     <div className="flex-1">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Processing Speed</p>
                       <p className="text-lg font-medium text-slate-900">3.4 seconds / studio render</p>
@@ -366,7 +389,6 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* Added Value Section */}
       <section className="value-prop-section py-32 px-6 max-w-7xl mx-auto">
         <div className="text-center mb-20">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">benefits<sup>[03]</sup></p>
@@ -399,12 +421,25 @@ const App: React.FC = () => {
         <p className="text-slate-500 mb-20">{t.audienceSub}</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
            {[
-             { title: t.value1Title, desc: t.value1Desc, icon: "🏠" },
-             { title: t.value2Title, desc: t.value2Desc, icon: "📦" },
-             { title: t.value3Title, desc: t.value3Desc, icon: "🔥" }
+             { title: t.value1Title, desc: t.value1Desc, icon: (
+               <svg className="w-12 h-12 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+               </svg>
+             ) },
+             { title: t.value2Title, desc: t.value2Desc, icon: (
+               <svg className="w-12 h-12 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+               </svg>
+             ) },
+             { title: t.value3Title, desc: t.value3Desc, icon: (
+               <svg className="w-12 h-12 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.99 7.99 0 0120 13a7.98 7.98 0 01-2.343 5.657z" />
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.879 16.121A3 3 0 1012.015 11L11 14.015V11" />
+               </svg>
+             ) }
            ].map((item, i) => (
              <div key={i} className="audience-card p-10 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all text-left">
-                <div className="text-4xl mb-6">{item.icon}</div>
+                <div className="mb-6">{item.icon}</div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3">{item.title}</h3>
                 <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
              </div>
@@ -487,7 +522,14 @@ const App: React.FC = () => {
                 <div className="relative group">
                   <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'product')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                   <div className={`border-2 border-dashed rounded-2xl p-4 bg-slate-50 transition-all ${selectedImage ? 'border-black bg-white' : 'border-slate-200 hover:border-slate-400'}`}>
-                    {selectedImage ? <img src={selectedImage} className="w-full h-32 object-contain" /> : <div className="h-32 flex flex-col items-center justify-center gap-2 text-slate-300"><span className="text-2xl">📸</span><p className="text-[10px] font-bold uppercase">Click to upload</p></div>}
+                    {selectedImage ? <img src={selectedImage} className="w-full h-32 object-contain" /> : (
+                      <div className="h-32 flex flex-col items-center justify-center gap-2 text-slate-300">
+                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        </svg>
+                        <p className="text-[10px] font-bold uppercase">Click to upload</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -496,24 +538,62 @@ const App: React.FC = () => {
                 <div className="relative group">
                   <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                   <div className={`border-2 border-dashed rounded-2xl p-4 bg-slate-50 transition-all ${selectedLogo ? 'border-black bg-white' : 'border-slate-200'}`}>
-                    {selectedLogo ? <img src={selectedLogo} className="w-full h-12 object-contain" /> : <div className="h-12 flex flex-col items-center justify-center gap-1 text-slate-300"><p className="text-[10px] font-bold uppercase">Brand Logo</p></div>}
+                    {selectedLogo ? <img src={selectedLogo} className="w-full h-12 object-contain" /> : (
+                      <div className="h-12 flex flex-col items-center justify-center gap-1 text-slate-300">
+                        <p className="text-[10px] font-bold uppercase">Brand Logo</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
+          {/* Categorized Templates Section with Tooltips */}
           <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300 mb-6 flex items-center gap-2">
               <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] text-slate-600 font-bold">2</span>
               {t.step2}
             </h2>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setSelectedTemplate('none')} className={`col-span-2 p-3 text-[11px] font-bold rounded-xl border transition-all ${selectedTemplate === 'none' ? 'bg-black text-white border-black' : 'bg-slate-50 border-slate-100'}`}>Custom Prompt Only</button>
-              {PHOTO_TEMPLATES.slice(0, 8).map(template => (
-                <button key={template.id} onClick={() => setSelectedTemplate(template.id)} className={`p-3 text-left text-[10px] font-bold rounded-xl border transition-all ${selectedTemplate === template.id ? 'bg-black text-white border-black' : 'bg-white border-slate-100 hover:border-slate-300'}`}>
-                  {template.label[lang] || template.label.en}
+            
+            <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+              <div className="relative group/tooltip">
+                <button 
+                  onClick={() => setSelectedTemplate('none')}
+                  className={`w-full p-3 text-xs font-bold rounded-xl border transition-all ${selectedTemplate === 'none' ? 'bg-black text-white border-black shadow-md' : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-slate-300'}`}
+                >
+                  {t.customOnly}
                 </button>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
+                  {t.customDesc}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                </div>
+              </div>
+
+              {Object.entries(categorizedTemplates).map(([category, templates]) => (
+                <div key={category} className="space-y-2">
+                  <h3 className="text-[9px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 px-1">
+                    <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                    {category}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {templates.map(template => (
+                      <div key={template.id} className="relative group/tooltip">
+                        <button
+                          onClick={() => setSelectedTemplate(template.id)}
+                          className={`w-full p-3 text-left text-[10px] font-bold rounded-xl border transition-all h-full ${selectedTemplate === template.id ? 'bg-black text-white border-black shadow-md' : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'}`}
+                        >
+                          {template.label[lang] || template.label.en}
+                        </button>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 shadow-2xl pointer-events-none border border-slate-700">
+                          <p className="font-bold text-indigo-400 mb-1 uppercase text-[9px] tracking-widest">{template.label[lang] || template.label.en}</p>
+                          {template.description[lang] || template.description.en}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </section>
